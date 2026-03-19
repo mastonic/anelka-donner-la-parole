@@ -30,6 +30,15 @@ const VideoAnalytics = ({ pseudo }) => {
     );
   }
 
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-white/20 gap-4">
+        <TrendingUp size={40} />
+        <p className="font-bold uppercase tracking-widest text-xs">Données analytiques indisponibles.</p>
+      </div>
+    );
+  }
+
   const stats = [
     { label: 'Vues Totales', value: data.views.toLocaleString(), icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10' },
     { label: 'Interactions', value: data.likes.toLocaleString(), icon: Heart, color: 'text-red-400', bg: 'bg-red-400/10' },
