@@ -382,6 +382,43 @@ router.get('/jobs/:id', async (req, res) => {
     }
 });
 
+// Upload voice reference audio (multipart/form-data)
+const Busboy = require('busboy');
+router.post('/admin/upload-voice-ref', (req, res) => {
+    try {
+        const busboy = Busboy({ headers: req.headers });
+        let fileBuffer = null;
+        let fileName = 'dolu_ref.mp3';
+
+        busboy.on('file', (fieldname, file, info) => {
+            fileName = info.filename || fileName;
+            const chunks = [];
+            file.on('data', (chunk) => chunks.push(chunk));
+            file.on('end', () => { fileBuffer = Buffer.concat(chunks); });
+        });
+
+        busboy.on('finish', async () => {
+            try {
+                if (!fileBuffer) return res.status(400).json({ error: 'No file received' });
+                const bucket = admin.storage().bucket();
+                const blob = bucket.file('assets/dolu_ref.mp3');
+                await blob.save(fileBuffer, { contentType: 'audio/mpeg', metadata: { cacheControl: 'no-cache' } });
+                await blob.makePublic();
+                const url = blob.publicUrl();
+                res.json({ success: true, url, size: fileBuffer.length });
+            } catch (err) {
+                console.error('Upload voice ref error:', err);
+                res.status(500).json({ error: err.message });
+            }
+        });
+
+        req.pipe(busboy);
+    } catch (err) {
+        console.error('Upload voice ref error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.get('/analytics', async (req, res) => {
     try {
         const { pseudo } = req.query;

@@ -6,6 +6,46 @@ import AdminCrible from './AdminCrible';
 import TiktokSheet from './TiktokSheet';
 import VideoAnalytics from './VideoAnalytics';
 
+const VoiceRefUploader = () => {
+  const [status, setStatus] = React.useState(null); // null | 'uploading' | 'done' | 'error'
+  const [info, setInfo] = React.useState('');
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setStatus('uploading');
+    setInfo('');
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/admin/upload-voice-ref', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setStatus('done');
+      setInfo(`✅ ${file.name} — ${Math.round(data.size / 1024)} KB uploadé.`);
+    } catch (err) {
+      setStatus('error');
+      setInfo(err.message);
+    }
+  };
+
+  return (
+    <label className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-dashed cursor-pointer transition
+      ${status === 'done' ? 'border-emerald-500/40 bg-emerald-500/5' : status === 'error' ? 'border-red-500/40 bg-red-500/5' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>
+      <input type="file" accept="audio/*" className="hidden" onChange={handleFile} />
+      {status === 'uploading' ? (
+        <Loader2 className="animate-spin text-purple-400" size={24} />
+      ) : (
+        <Server size={24} className={status === 'done' ? 'text-emerald-400' : 'text-white/20'} />
+      )}
+      <p className="text-xs font-black uppercase tracking-widest text-white/40">
+        {status === 'uploading' ? 'Upload en cours...' : status === 'done' ? 'Référence mise à jour' : 'Déposer le fichier audio (MP3, max 50s)'}
+      </p>
+      {info && <p className="text-[10px] text-center text-white/40 italic">{info}</p>}
+    </label>
+  );
+};
+
 const Dashboard = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState('crible');
   const [topic, setTopic] = useState('');
@@ -658,6 +698,15 @@ const Dashboard = ({ onBack }) => {
                     <p className="text-center mt-4 text-[10px] text-white/20 uppercase font-bold tracking-widest">Ces clés sont partagées avec tous les clients de la plateforme.</p>
                 </div>
              </form>
+
+             {/* Voice Reference Upload */}
+             <div className="pt-8 border-t border-white/5 space-y-4">
+               <div>
+                 <h3 className="text-sm font-black uppercase tracking-widest text-white/40">Voix de Référence (Clonage)</h3>
+                 <p className="text-[10px] text-white/20 mt-1 italic">Fichier audio de Dolunaelka — 30 à 50 sec, MP3, voix seule sans musique de fond.</p>
+               </div>
+               <VoiceRefUploader />
+             </div>
           </div>
         )}
       </main>

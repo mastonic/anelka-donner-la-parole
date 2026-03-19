@@ -24,6 +24,26 @@ else:
 db = firestore.client()
 bucket = storage.bucket()
 
+def sync_voice_ref():
+    """
+    Télécharge le fichier de référence vocale depuis Firebase Storage.
+    Si 'assets/dolu_ref.mp3' existe dans Storage, il remplace le fichier local.
+    Cela permet de mettre à jour la voix de référence sans redéployer la VM.
+    """
+    local_path = os.path.join(ASSETS_DIR, "dolu_ref_short.mp3")
+    blob = bucket.blob("assets/dolu_ref.mp3")
+    try:
+        if blob.exists():
+            print("🔄 Downloading latest voice reference from Firebase Storage...")
+            blob.download_to_filename(local_path)
+            size_kb = os.path.getsize(local_path) // 1024
+            print(f"✅ Voice reference updated: {size_kb} KB")
+        else:
+            print("ℹ️ No voice reference in Storage, using local file.")
+    except Exception as e:
+        print(f"⚠️ Could not sync voice ref: {e}. Using existing local file.")
+
+
 def get_api_keys():
     """Récupère toutes les clés API depuis Firestore."""
     try:
@@ -96,14 +116,14 @@ def generate_voiceover(text, segment_id, keys, job_id):
     """
     cleaned = clean_text(text)
 
-    # 1. Fish Speech API (voice clone, cloud, aucun GPU requis)
-    if keys.get('fish'):
+    # 1. Fish Speech via Fal.ai (voice clone, cloud, aucun GPU requis)
+    if keys.get('fal'):
         try:
-            return generate_voiceover_fish_speech(cleaned, segment_id, keys['fish'])
+            return generate_voiceover_fish_speech(cleaned, segment_id, keys['fal'])
         except Exception as e:
-            print(f"⚠️ Fish Speech failed: {e}. Trying GPT-SoVITS...")
+            print(f"⚠️ Fish Speech (Fal.ai) failed: {e}. Trying GPT-SoVITS...")
             db.collection('jobs').document(job_id).update({
-                'logs': firestore.ArrayUnion([f"Segment {segment_id}: Fish Speech échoué ({e}), tentative SoVITS..."])
+                'logs': firestore.ArrayUnion([f"Segment {segment_id}: Fish Speech Fal.ai échoué ({e}), tentative SoVITS..."])
             })
 
     # 2. GPT-SoVITS (local, nécessite GPU)
@@ -163,6 +183,7 @@ def process_job(job_id, data):
     print(f"🚀 Processing Job: {job_id}")
     try:
         keys = get_api_keys()
+        sync_voice_ref()  # Always pull the latest voice reference from Firebase Storage
         db.collection('jobs').document(job_id).update({
             'status': 'processing',
             'vmStatus': 'running',
