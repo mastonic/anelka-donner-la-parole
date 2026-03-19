@@ -21,7 +21,10 @@ class CuratorAgent {
       - Style visuel : 'Cinematic realism', 'Golden hour lighting', 'highly detailed portrait'.
       
       CONTRAINTES SCRIPT :
-      - Utilise des expressions créoles de temps en temps (ex: "Bonjou tout moun", "Peyi-a", "Bagay-la", "Sa sé vré").
+      - Le script DOIT être rédigé EN FRANÇAIS standard, fluide et naturel. C'est la langue principale.
+      - Le créole est STRICTEMENT RÉSERVÉ aux moments d'émotion forte UNIQUEMENT (choc, colère, trahison, joie explosive, punchline finale). Maximum 2 à 3 expressions créoles sur tout le script.
+      - Ces expressions créoles doivent s'insérer naturellement au milieu d'une phrase en français (ex: "J'étais là, bouche bée... bagay-la, c'était trop fort."). JAMAIS une phrase entière en créole.
+      - NE PAS utiliser le créole pour la narration normale, les transitions, les introductions ou les explications.
       - Le ton doit être immersif, avec du rythme (pauses marquées par ...).
       - Divise le script en 10 à 12 segments courts.
       - Chaque segment doit avoir :
