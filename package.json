@@ -1,0 +1,20 @@
+{
+  "name": "viral-factory",
+  "version": "1.0.0",
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "start:backend": "cd backend && node src/index.js",
+    "start:frontend": "cd frontend && npm run dev",
+    "dev": "npx concurrently \"npm run start:backend\" \"npm run start:frontend\""
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "description": "**Donner La Parole** est une plateforme innovante qui transforme les témoignages vécus en vidéos virales TikTok. Propulsée par une intelligence artificielle multi-agents (inspirée de CrewAI), elle automatise tout le processus : de la soumission du récit jusqu'au montage vidéo final, incarné par la voix clonée de **Dolunaelka**.",
+  "main": "index.js",
+  "devDependencies": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
