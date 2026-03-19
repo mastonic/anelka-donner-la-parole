@@ -46,14 +46,14 @@ const LandingPage = ({ onStartClient, onStartAdmin }) => {
             <a href="#showcase" className="text-sm font-bold text-white/40 hover:text-white transition">Succès</a>
             <a href="#faq" className="text-sm font-bold text-white/40 hover:text-white transition">FAQ</a>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={onStartAdmin}
-              className="text-sm font-bold text-white/40 hover:text-white transition px-4"
+              className="text-sm font-bold text-white border border-white/20 hover:border-white/60 hover:text-white transition px-4 py-3 rounded-[1rem]"
             >
               Connexion
             </button>
-            <button 
+            <button
               onClick={onStartClient}
               className="bg-emerald-500 text-black px-6 py-3 rounded-[1rem] text-sm font-black shadow-xl shadow-emerald-500/20 transition hover:scale-105 active:scale-95"
             >
