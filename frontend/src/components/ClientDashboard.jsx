@@ -198,40 +198,53 @@ const ClientDashboard = ({ onBack }) => {
                       <p className="text-white/20 font-bold italic uppercase tracking-widest">Aucune histoire soumise pour le moment.</p>
                     </div>
                   ) : stories.map(story => (
-                    <div key={story.id} className="bg-white/5 border border-white/10 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:bg-white/[0.08] transition">
+                    <div
+                      key={story.id}
+                      onClick={() => story.status === 'published' && setSelectedStoryForSheet(story)}
+                      className={`relative bg-white/5 border p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-6 group transition overflow-hidden
+                        ${story.status === 'published'
+                          ? 'border-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-500/5 cursor-pointer shadow-lg shadow-emerald-500/5'
+                          : 'border-white/10 hover:bg-white/[0.08] cursor-default'}`}
+                    >
+                      {/* Bannière "VOIR LA VIDÉO" sur les publiées */}
+                      {story.status === 'published' && (
+                        <div className="absolute top-0 right-0 bg-emerald-500 text-black text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-2xl flex items-center gap-1">
+                          <Video size={10} /> VOIR LA VIDÉO
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-6">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${story.status === 'rejected' ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
-                           {story.status === 'rejected' ? <AlertCircle size={24} /> : <FileText size={24} />}
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                          story.status === 'published' ? 'bg-emerald-500/20 text-emerald-400' :
+                          story.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
+                          'bg-white/10 text-white/40'
+                        }`}>
+                          {story.status === 'published' ? <Video size={22} /> :
+                           story.status === 'rejected' ? <AlertCircle size={24} /> :
+                           <FileText size={24} />}
                         </div>
                         <div>
-                           <h3 className="font-bold text-lg">{story.title}</h3>
-                           <p className="text-sm text-white/40">{story.createdAt ? new Date(story.createdAt._seconds * 1000).toLocaleDateString('fr-FR') : 'Date inconnue'}</p>
+                          <h3 className="font-bold text-lg">{story.title}</h3>
+                          <p className="text-sm text-white/40">{story.createdAt ? new Date(story.createdAt._seconds * 1000).toLocaleDateString('fr-FR') : 'Date inconnue'}</p>
                         </div>
                       </div>
-                        <div className="flex flex-col items-end gap-3">
-                           <div className="text-right">
-                              <p className={`text-xs font-bold uppercase tracking-widest ${story.status === 'rejected' ? 'text-red-400' : 'text-emerald-400'}`}>
-                                 {statusProgress[story.status]?.label || 'En attente'}
-                              </p>
-                              {getFriendlyFeedback(story) && (
-                                <p className="text-[11px] text-white/30 mt-1 max-w-[200px] italic">
-                                   "{getFriendlyFeedback(story)}"
-                                </p>
-                              )}
-                           </div>
-                           
-                           {story.status === 'published' && (
-                             <button 
-                               onClick={() => setSelectedStoryForSheet(story)}
-                               className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-black transition"
-                             >
-                               <Video size={12} />
-                               Fiche TikTok
-                             </button>
-                           )}
-                        </div>
-                        <ChevronLeft size={20} className="rotate-180 text-white/20" />
+
+                      <div className="flex flex-col items-end gap-2">
+                        <p className={`text-xs font-bold uppercase tracking-widest ${
+                          story.status === 'published' ? 'text-emerald-400' :
+                          story.status === 'rejected' ? 'text-red-400' :
+                          'text-white/40'
+                        }`}>
+                          {statusProgress[story.status]?.label || 'En attente'}
+                        </p>
+                        {getFriendlyFeedback(story) && (
+                          <p className="text-[11px] text-white/30 mt-1 max-w-[200px] italic">"{getFriendlyFeedback(story)}"</p>
+                        )}
+                        {story.status === 'published' && (
+                          <p className="text-[10px] text-emerald-400/60 font-bold uppercase tracking-widest">Appuie pour ouvrir →</p>
+                        )}
                       </div>
+                    </div>
                   ))}
                 </div>
               </div>
