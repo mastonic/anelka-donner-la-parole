@@ -91,7 +91,7 @@ echo "$(date): render_engine.py finished." >> $LOG`;
                     items.push({ key: 'startup-script', value: startupScript });
                 }
 
-                await computeClient.setMetadata({
+                const [setMetaOp] = await computeClient.setMetadata({
                     project: PROJECT_ID,
                     zone: ZONE,
                     instance: INSTANCE_NAME,
@@ -100,6 +100,14 @@ echo "$(date): render_engine.py finished." >> $LOG`;
                         items: items
                     }
                 });
+
+                // Wait for setMetadata LRO to fully complete before starting the VM
+                // (avoids "fingerprint changed during start operation" race condition)
+                if (setMetaOp && typeof setMetaOp.promise === 'function') {
+                    await setMetaOp.promise();
+                } else {
+                    await new Promise(r => setTimeout(r, 5000));
+                }
 
                 await computeClient.start({
                     project: PROJECT_ID,
