@@ -108,6 +108,25 @@ const Dashboard = ({ onBack }) => {
   };
 
   const [errorMsg, setErrorMsg] = useState(null);
+  const [isRetriggering, setIsRetriggering] = useState(false);
+
+  const retriggerVM = async (storyId) => {
+    try {
+      setIsRetriggering(true);
+      const res = await fetch('/api/production/retrigger-vm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storyId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur retrigger VM');
+      // Status will update via polling
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setIsRetriggering(false);
+    }
+  };
 
   const startProduction = async (storyId) => {
     try {
@@ -467,6 +486,17 @@ const Dashboard = ({ onBack }) => {
                                           <div key={i} className="text-white/40 mb-1 border-l border-white/10 pl-2">{log}</div>
                                         ))}
                                      </div>
+                                   )}
+                                   {/* Relancer la VM si elle ne tourne pas */}
+                                   {(!jobData?.vmStatus || jobData?.vmStatus === 'waiting_queue') && (
+                                     <button
+                                       onClick={() => retriggerVM(selectedStory)}
+                                       disabled={isRetriggering}
+                                       className="w-full mt-3 bg-orange-500 hover:bg-orange-400 text-black py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition disabled:opacity-50"
+                                     >
+                                       {isRetriggering ? <Loader2 className="animate-spin" size={14} /> : <Server size={14} />}
+                                       {isRetriggering ? 'Relance en cours...' : '⚡ Relancer la VM'}
+                                     </button>
                                    )}
                                 </div>
                             </div>

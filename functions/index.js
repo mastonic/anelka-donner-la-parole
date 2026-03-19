@@ -16,7 +16,7 @@ const INSTANCE_NAME = "prod-vm-dolu";
  * Triggered when an Admin validates a story.
  * Starts the GPU VM and triggers the render engine.
  */
-exports.triggerRenderPipeline = functions.region("us-central1").runWith({ memory: '512MB' }).firestore
+exports.triggerRenderPipeline = functions.region("us-central1").runWith({ memory: '1GB' }).firestore
     .document("stories/{storyId}")
     .onUpdate(async (change, context) => {
         // LAZY LOAD heavy compute library to avoid load timeout
@@ -332,6 +332,32 @@ router.get('/user/profile/:pseudo', async (req, res) => {
         });
     } catch (err) {
         console.error("API Error (profile):", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/production/retrigger-vm', async (req, res) => {
+    try {
+        const { storyId } = req.body;
+        if (!storyId) return res.status(400).json({ error: 'storyId is required' });
+
+        const storyDoc = await db.collection('stories').doc(storyId).get();
+        if (!storyDoc.exists) return res.status(404).json({ error: 'Histoire non trouvée.' });
+        const story = storyDoc.data();
+
+        if (!story.segments || story.segments.length === 0) {
+            return res.status(400).json({ error: 'Aucun segment trouvé. Lance d\'abord la production complète.' });
+        }
+
+        // Step 1: set to 'selected' so the trigger can fire again
+        await db.collection('stories').doc(storyId).update({ status: 'selected', updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        // Step 2: wait 1s then set back to 'validée' to trigger the CF
+        await new Promise(r => setTimeout(r, 1500));
+        await db.collection('stories').doc(storyId).update({ status: 'validée', updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+
+        res.json({ success: true, message: 'VM retrigger lancé.' });
+    } catch (err) {
+        console.error("API Error (retrigger-vm):", err);
         res.status(500).json({ error: err.message });
     }
 });
