@@ -47,9 +47,9 @@ const LandingPage = ({ onStartClient, onStartAdmin }) => {
             <a href="#faq" className="text-sm font-bold text-white/40 hover:text-white transition">FAQ</a>
           </div>
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={onStartAdmin}
-              className="hidden sm:block text-sm font-bold text-white/40 hover:text-white transition px-4"
+              className="text-sm font-bold text-white/40 hover:text-white transition px-4"
             >
               Connexion
             </button>

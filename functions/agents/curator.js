@@ -9,7 +9,7 @@ class CuratorAgent {
   async generateScript(storyData) {
     const keys = await configService.getApiKeys();
     const genAI = new GoogleGenerativeAI(keys.google);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }, { apiVersion: "v1" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }, { apiVersion: "v1beta" });
 
     const prompt = `
       Tu es Dolunaelka, un conteur antillais (Martinique/Guadeloupe) charismatique, sage et un peu sarcastique.

@@ -2,10 +2,28 @@ const curatorAgent = require('./agents/curator');
 const configService = require('./configService');
 const axios = require('axios');
 const admin = require('firebase-admin');
+const path = require('path');
 
 class ProductionEngine {
   constructor() {
     this.db = admin.firestore();
+  }
+
+  // Télécharge une image depuis une URL Fal.ai et la stocke dans Firebase Storage
+  async uploadImageToStorage(imageUrl, storyId, index) {
+    try {
+      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+      const buffer = Buffer.from(response.data);
+      const bucket = admin.storage().bucket();
+      const filePath = `stories/${storyId}/segment_${index}.jpg`;
+      const file = bucket.file(filePath);
+      await file.save(buffer, { contentType: 'image/jpeg', metadata: { cacheControl: 'public, max-age=31536000' } });
+      await file.makePublic();
+      return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+    } catch (err) {
+      console.error(`Failed to upload image ${index} to Storage:`, err.message);
+      return imageUrl; // fallback sur l'URL Fal.ai originale
+    }
   }
 
   async startProduction(storyId) {
@@ -57,9 +75,12 @@ class ProductionEngine {
             headers: { 'Authorization': `Key ${keys.fal}` }
           });
           
+          const falUrl = response.data.images[0].url;
+          // Stocker dans Firebase Storage pour URL permanente
+          const permanentUrl = await this.uploadImageToStorage(falUrl, storyId, index);
           return {
             ...seg,
-            img_url: response.data.images[0].url
+            img_url: permanentUrl
           };
         } catch (err) {
           console.error(`Failed to generate image ${index}:`, err.message);

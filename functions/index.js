@@ -61,11 +61,34 @@ exports.triggerRenderPipeline = functions.region("us-central1").firestore
                 
                 const metadata = instance.metadata || { items: [] };
                 const items = metadata.items || [];
+
+                // Set job_id
                 const jobIndex = items.findIndex(i => i.key === 'job_id');
                 if (jobIndex > -1) {
                     items[jobIndex].value = storyId;
                 } else {
                     items.push({ key: 'job_id', value: storyId });
+                }
+
+                // Inject startup script so the VM automatically runs render_engine.py on boot
+                const startupScript = `#!/bin/bash
+LOG="/tmp/render_startup.log"
+echo "$(date): VM started for job ${storyId}" >> $LOG
+PROJECT_DIR=$(find /home /opt /root -maxdepth 5 -name "render_engine.py" -path "*/rendering/*" 2>/dev/null | head -1 | xargs -I{} dirname {} | xargs -I{} dirname {})
+if [ -z "$PROJECT_DIR" ]; then
+  echo "$(date): render_engine.py not found, aborting." >> $LOG
+  exit 1
+fi
+cd "$PROJECT_DIR"
+source venv/bin/activate 2>/dev/null || true
+python3 rendering/render_engine.py >> $LOG 2>&1
+echo "$(date): render_engine.py finished." >> $LOG`;
+
+                const startupIndex = items.findIndex(i => i.key === 'startup-script');
+                if (startupIndex > -1) {
+                    items[startupIndex].value = startupScript;
+                } else {
+                    items.push({ key: 'startup-script', value: startupScript });
                 }
 
                 await computeClient.setMetadata({
@@ -166,11 +189,22 @@ router.post('/stories', async (req, res) => {
 router.post('/production/start', async (req, res) => {
     try {
         const { storyId } = req.body;
-        const result = await productionEngine.startProduction(storyId);
-        res.json(result);
+        if (!storyId) return res.status(400).json({ error: 'storyId is required' });
+
+        // Validate story exists before returning
+        const storyDoc = await db.collection('stories').doc(storyId).get();
+        if (!storyDoc.exists) return res.status(404).json({ error: 'Histoire non trouvée.' });
+
+        // Return immediately so the frontend doesn't hang
+        res.json({ success: true, jobId: storyId });
+
+        // Run production pipeline in background (fire-and-forget)
+        productionEngine.startProduction(storyId).catch(err => {
+            console.error('Background production failed:', err);
+        });
     } catch (err) {
         console.error("API Error (production/start):", err);
-        res.status(500).json({ error: err.message });
+        if (!res.headersSent) res.status(500).json({ error: err.message });
     }
 });
 
@@ -222,7 +256,7 @@ router.post('/ai/improve', async (req, res) => {
         if (!keys.google) throw new Error("Google API Key missing");
         
         const genAI = new GoogleGenerativeAI(keys.google);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }, { apiVersion: "v1" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }, { apiVersion: "v1beta" });
         const prompt = `Tu es une IA d'aide à l'écriture. Améliore l'histoire suivante pour un format TikTok viral narré par Dolunaelka. Conserve l'authenticité et le vécu, mais structure le récit pour maximiser l'impact émotionnel et le suspense. Ajoute un 'Hook' percutant au début. Réponds avec le texte amélioré uniquement.
 
 HISTOIRE A AMÉLIORER :
@@ -359,7 +393,9 @@ router.post('/config', async (req, res) => {
     }
 });
 
-router.use('/api', router);
-app.use('/', router);
+app.use('/api', router);
 
-exports.api = functions.region("us-central1").https.onRequest(app);
+exports.api = functions.region("us-central1").runWith({
+    timeoutSeconds: 540,
+    memory: '512MB'
+}).https.onRequest(app);

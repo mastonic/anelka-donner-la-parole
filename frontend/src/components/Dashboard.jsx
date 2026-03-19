@@ -125,7 +125,7 @@ const Dashboard = ({ onBack }) => {
       }
 
       setJobId(data.jobId);
-      setStatus('completed');
+      // Ne pas forcer 'completed' ici - le polling Firestore met à jour le statut réel
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message);
@@ -399,7 +399,18 @@ const Dashboard = ({ onBack }) => {
                       {storyData?.segments?.length > 0 ? storyData.segments.map((seg, i) => (
                         <div key={i} className="aspect-square bg-black/40 rounded-xl border border-white/5 flex items-center justify-center group relative overflow-hidden">
                           {seg.img_url ? (
-                            <img src={seg.img_url} alt={`Frame ${i+1}`} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" />
+                            <>
+                              <img
+                                src={seg.img_url}
+                                alt={`Frame ${i+1}`}
+                                className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+                                onError={(e) => { e.target.style.display='none'; e.target.nextElementSibling.style.display='flex'; }}
+                              />
+                              <div className="hidden absolute inset-0 flex-col items-center justify-center gap-2">
+                                <Loader2 className="animate-spin text-white/10" size={16} />
+                                <span className="text-[10px] text-white/20 select-none">Asset {i+1}...</span>
+                              </div>
+                            </>
                           ) : (
                             <div className="flex flex-col items-center gap-2">
                               <Loader2 className="animate-spin text-white/10" size={16} />

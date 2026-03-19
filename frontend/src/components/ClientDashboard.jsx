@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { User, FileText, Settings, LogOut, ChevronLeft, PlusCircle, Wallet, Award, Clock, CheckCircle2, AlertCircle, TrendingUp, Loader2, BarChart3, Video } from 'lucide-react';
 import SubmissionForm from './SubmissionForm';
 import TiktokSheet from './TiktokSheet';
@@ -42,9 +42,21 @@ const ClientDashboard = ({ onBack }) => {
     'wait': { label: 'En attente', color: 'bg-white/20', percent: 20 },
     'analysis': { label: 'En cours d\'analyse', color: 'bg-blue-400', percent: 40 },
     'selected': { label: 'Sélectionnée', color: 'bg-purple-400', percent: 60 },
+    'generating_script': { label: 'Script en cours', color: 'bg-yellow-400', percent: 65 },
+    'generating_images': { label: 'Images en cours', color: 'bg-yellow-400', percent: 70 },
+    'validée': { label: 'En production', color: 'bg-yellow-400', percent: 80 },
     'production': { label: 'En production', color: 'bg-yellow-400', percent: 80 },
     'published': { label: 'Publiée', color: 'bg-emerald-400', percent: 100 },
-    'rejected': { label: 'Non retenue', color: 'bg-red-400', percent: 0 }
+    'rejected': { label: 'Non retenue', color: 'bg-red-400', percent: 0 },
+    'error_production': { label: 'En cours de traitement', color: 'bg-white/20', percent: 20 },
+    'error_orchestration': { label: 'En cours de traitement', color: 'bg-white/20', percent: 20 },
+  };
+
+  // Ne jamais afficher les erreurs techniques brutes aux clients
+  const getFriendlyFeedback = (story) => {
+    if (!story.feedback) return null;
+    if (story.status === 'rejected') return story.feedback;
+    return null; // Les erreurs techniques sont masquées
   };
 
   if (showSubmission) {
@@ -201,9 +213,9 @@ const ClientDashboard = ({ onBack }) => {
                               <p className={`text-xs font-bold uppercase tracking-widest ${story.status === 'rejected' ? 'text-red-400' : 'text-emerald-400'}`}>
                                  {statusProgress[story.status]?.label || 'En attente'}
                               </p>
-                              {story.feedback && (
+                              {getFriendlyFeedback(story) && (
                                 <p className="text-[11px] text-white/30 mt-1 max-w-[200px] italic">
-                                   "{story.feedback}"
+                                   "{getFriendlyFeedback(story)}"
                                 </p>
                               )}
                            </div>

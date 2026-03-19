@@ -1,185 +1,270 @@
 import os
 import time
-import json
+import base64
 import requests
 import subprocess
 import firebase_admin
 from firebase_admin import credentials, storage, firestore
 
 # --- Configuration ---
-# Use Service Account from environment or local file
-cred = credentials.Certificate("serviceAccountKey.json")
-firebase_admin.initialize_app(cred, {
-    'storageBucket': 'dolunaleka.appspot.com'
-})
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ASSETS_DIR = os.path.join(SCRIPT_DIR, "assets")
+TEMP_DIR = os.path.join(SCRIPT_DIR, "temp_assets")
+os.makedirs(TEMP_DIR, exist_ok=True)
+
+# On GCP VM, use Application Default Credentials (service account attached to VM).
+# Fallback to local serviceAccountKey.json for local testing.
+_sa_path = os.path.join(SCRIPT_DIR, "..", "serviceAccountKey.json")
+if os.path.exists(_sa_path):
+    cred = credentials.Certificate(_sa_path)
+    firebase_admin.initialize_app(cred, {'storageBucket': 'dolunaleka.appspot.com'})
+else:
+    firebase_admin.initialize_app(options={'storageBucket': 'dolunaleka.appspot.com'})
 
 db = firestore.client()
 bucket = storage.bucket()
 
-SOVITS_API_URL = "http://localhost:9880" # GPT-SoVITS API endpoint
-TEMP_DIR = "temp_assets"
-os.makedirs(TEMP_DIR, exist_ok=True)
+def get_api_keys():
+    """Récupère toutes les clés API depuis Firestore."""
+    try:
+        doc = db.collection('config').document('api_keys').get()
+        if doc.exists:
+            return doc.to_dict()
+    except Exception as e:
+        print(f"⚠️ Could not fetch API keys from Firestore: {e}")
+    return {
+        'google': os.environ.get('GEMINI_API_KEY'),
+        'fish': os.environ.get('FISH_SPEECH_KEY')
+    }
 
-def clean_text_for_sovits(text):
-    """Remove special characters that might cause SoVITS to crash."""
+def clean_text(text):
+    """Nettoie le texte pour la synthèse vocale."""
     chars_to_remove = ["*", "#", "_", "~", "[", "]", "(", ")"]
     for char in chars_to_remove:
         text = text.replace(char, "")
-    return text
+    return text.strip()
 
-def generate_voiceover(text, segment_id):
-    """Call GPT-SoVITS Local API, fallback to Gemini TTS if fails."""
-    print(f"🎙️ Generating voiceover for segment {segment_id}...")
-    cleaned_text = clean_text_for_sovits(text)
-    wav_path = os.path.join(TEMP_DIR, f"audio_{segment_id}.wav")
-    
-    # 1. Try GPT-SoVITS (Local)
+def generate_voiceover_fish_speech(text, segment_id, fish_key):
+    """
+    Génère la voix clonée via Fish Speech API.
+    Utilise dolu_ref_short.mp3 comme référence audio pour le clonage.
+    """
+    print(f"🎙️ Fish Speech: Generating cloned voice for segment {segment_id}...")
+    ref_audio_path = os.path.join(ASSETS_DIR, "dolu_ref_short.mp3")
+    output_path = os.path.join(TEMP_DIR, f"audio_{segment_id}.mp3")
+
+    # Encode reference audio in base64
+    with open(ref_audio_path, "rb") as f:
+        ref_audio_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+    payload = {
+        "text": text,
+        "references": [
+            {
+                "audio": ref_audio_b64,
+                "text": "C'est Dolunaelka, je raconte mon histoire depuis les Antilles."
+            }
+        ],
+        "format": "mp3",
+        "mp3_bitrate": 128,
+        "normalize": True,
+        "latency": "normal"
+    }
+
+    response = requests.post(
+        "https://api.fish.audio/v1/tts",
+        json=payload,
+        headers={
+            "Authorization": f"Bearer {fish_key}",
+            "Content-Type": "application/json"
+        },
+        timeout=60
+    )
+
+    if response.status_code == 200:
+        with open(output_path, "wb") as f:
+            f.write(response.content)
+        print(f"✅ Fish Speech cloned voice OK (segment {segment_id})")
+        return output_path
+    else:
+        raise Exception(f"Fish Speech API error {response.status_code}: {response.text[:200]}")
+
+def generate_voiceover(text, segment_id, keys, job_id):
+    """
+    Génère la voix pour un segment.
+    Priorité : Fish Speech (clone) → GPT-SoVITS (local) → Erreur
+    """
+    cleaned = clean_text(text)
+
+    # 1. Fish Speech API (voice clone, cloud, aucun GPU requis)
+    if keys.get('fish'):
+        try:
+            return generate_voiceover_fish_speech(cleaned, segment_id, keys['fish'])
+        except Exception as e:
+            print(f"⚠️ Fish Speech failed: {e}. Trying GPT-SoVITS...")
+            db.collection('jobs').document(job_id).update({
+                'logs': firestore.ArrayUnion([f"Segment {segment_id}: Fish Speech échoué ({e}), tentative SoVITS..."])
+            })
+
+    # 2. GPT-SoVITS (local, nécessite GPU)
     try:
-        SOVITS_API_URL = "http://localhost:9880"
         params = {
-            "text": cleaned_text,
+            "text": cleaned,
             "text_language": "fr",
-            "refer_wav_path": "assets/dolu_ref_short.mp3",
+            "refer_wav_path": os.path.join(ASSETS_DIR, "dolu_ref_short.mp3"),
             "prompt_text": "C'est Dolunaelka, je raconte mon histoire.",
             "prompt_language": "fr"
         }
-        response = requests.get(SOVITS_API_URL, params=params, timeout=10)
+        response = requests.get("http://localhost:9880", params=params, timeout=10)
         if response.status_code == 200:
+            wav_path = os.path.join(TEMP_DIR, f"audio_{segment_id}.wav")
             with open(wav_path, "wb") as f:
                 f.write(response.content)
-            print("✅ SoVITS (Cloned) OK")
+            print(f"✅ GPT-SoVITS OK (segment {segment_id})")
             return wav_path
     except Exception as e:
-        print(f"⚠️ SoVITS Failed: {e}. Falling back to Gemini TTS...")
+        print(f"⚠️ GPT-SoVITS failed: {e}")
 
-    # 2. Fallback to Gemini TTS (Cloud API)
-    google_key = get_google_key()
-    if not google_key:
-        raise Exception("Missing Google API Key for TTS Fallback.")
-        
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}"
-    # This is a placeholder for actual Gemini TTS REST call if available, 
-    # otherwise we use a generic error or a mock for this demo.
-    # Note: Gemini 2.0 Flash has real-time multimodal audio, but for now we follow the user's "Puck" request.
-    
-    # Simulating a high-quality TTS call (Note: Adjust to your real TTS provider if different)
-    # If SoVITS is the only allowed voice, we must stop here or use another provider.
-    db.collection('jobs').document(job_id).update({
-        'logs': firestore.ArrayUnion([f"Segment {segment_id}: SoVITS non disponible, utilisation du fallback."])
-    })
-    
-    # For now, if SoVITS fails, we raise an error if we don't have a secondary TTS.
-    raise Exception("SoVITS Server disconnected. Please start the GPT-SoVITS process on the VM.")
+    raise Exception("Aucun moteur TTS disponible. Vérifie la clé Fish Speech dans les Paramètres.")
 
 def create_segment_video(img_url, audio_path, segment_id, subtitle_text):
-    """Use FFmpeg for Ken Burns effect + Subtitles."""
+    """Génère une vidéo de segment avec Ken Burns effect + sous-titres via FFmpeg."""
     print(f"🎬 Rendering segment {segment_id}...")
     img_path = os.path.join(TEMP_DIR, f"img_{segment_id}.jpg")
-    
+    output_path = os.path.join(TEMP_DIR, f"segment_{segment_id}.mp4")
+    font_path = os.path.join(ASSETS_DIR, "DejaVuSans-Bold.ttf")
+
     # Download image
-    img_data = requests.get(img_url).content
+    img_data = requests.get(img_url, timeout=30).content
     with open(img_path, "wb") as f:
         f.write(img_data)
-        
-    output_path = os.path.join(TEMP_DIR, f"segment_{segment_id}.mp4")
-    
-    # Dynamic Ken Burns (Random Zoom/Pan direction)
-    z_start = "1.0"
-    z_end = "1.5"
-    
-    # FFmpeg command: scale -> zoompan -> drawtext
-    # We use a 9:16 aspect ratio (1080x1920)
+
+    # Escape subtitle text for FFmpeg drawtext
+    safe_text = subtitle_text.upper().replace("'", "\\'").replace(":", "\\:").replace(",", "\\,")
+    safe_text = safe_text[:80]
+
     cmd = [
         "ffmpeg", "-i", img_path, "-i", audio_path,
-        "-filter_complex", 
-        f"[0:v]scale=2160:-1,zoompan=z='min(zoom+0.0015,{z_end})':d=125:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920[v];" +
-        f"[v]drawtext=text='{subtitle_text.upper()}':fontcolor=yellow:fontsize=64:fontfile=assets/DejaVuSans-Bold.ttf:x=(w-text_w)/2:y=h-400:shadowcolor=black:shadowx=4:shadowy=4:borderw=2:bordercolor=black",
-        "-c:v", "libx264", "-tune", "stillimage", "-pix_fmt", "yuv420p", "-shortest", output_path, "-y"
+        "-filter_complex",
+        f"[0:v]scale=2160:-1,zoompan=z='min(zoom+0.0015,1.5)':d=125:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920[v];"
+        f"[v]drawtext=text='{safe_text}':fontcolor=yellow:fontsize=60:fontfile='{font_path}'"
+        f":x=(w-text_w)/2:y=h-350:shadowcolor=black:shadowx=4:shadowy=4:borderw=3:bordercolor=black",
+        "-c:v", "libx264", "-tune", "stillimage", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-shortest", output_path, "-y"
     ]
-    
-    subprocess.run(cmd)
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"⚠️ FFmpeg segment error: {result.stderr[-500:]}")
     return output_path
 
 def process_job(job_id, data):
-    """Main job processing logic."""
+    """Logique principale du rendu."""
     print(f"🚀 Processing Job: {job_id}")
     try:
-        db.collection('jobs').document(job_id).update({'status': 'processing'})
-        
+        keys = get_api_keys()
+        db.collection('jobs').document(job_id).update({
+            'status': 'processing',
+            'vmStatus': 'running',
+            'logs': firestore.ArrayUnion(["🎬 Rendu démarré..."])
+        })
+
         segments = data.get('segments', [])
+        if not segments:
+            raise Exception("Aucun segment trouvé dans le job.")
+
         video_clips = []
-        
-        # 1. Generate Voice & Segment Videos
+
+        # 1. Générer voix + vidéo pour chaque segment
         for i, seg in enumerate(segments):
-            audio = generate_voiceover(seg['text'], i)
+            print(f"--- Segment {i+1}/{len(segments)} ---")
+            db.collection('jobs').document(job_id).update({
+                'logs': firestore.ArrayUnion([f"Segment {i+1}/{len(segments)}: génération voix..."])
+            })
+
+            if not seg.get('img_url'):
+                print(f"⚠️ Segment {i} has no image, skipping.")
+                continue
+
+            audio = generate_voiceover(seg['text'], i, keys, job_id)
             clip = create_segment_video(seg['img_url'], audio, i, seg['text'])
             video_clips.append(clip)
-            
-        # 2. Final Concatenation
-        concat_output = f"temp_{job_id}_concat.mp4"
-        with open("list.txt", "w") as f:
+
+        if not video_clips:
+            raise Exception("Aucun clip vidéo généré.")
+
+        # 2. Concaténation finale
+        print("🔗 Concatenating clips...")
+        concat_output = os.path.join(TEMP_DIR, f"{job_id}_concat.mp4")
+        list_file = os.path.join(TEMP_DIR, "list.txt")
+        with open(list_file, "w") as f:
             for clip in video_clips:
                 f.write(f"file '{clip}'\n")
-                
-        subprocess.run(["ffmpeg", "-f", "concat", "-safe", "0", "-i", "list.txt", "-c", "copy", concat_output, "-y"])
-        
-        # 3. Add Background Music (Low Volume Mix)
-        final_output = f"final_{job_id}.mp4"
-        bg_music = "assets/background_music.mp3" # Should be pre-placed on VM
-        
-        # Mix audio: Voice (original) + Music (attenuated)
-        cmd_mix = [
+
+        subprocess.run([
+            "ffmpeg", "-f", "concat", "-safe", "0", "-i", list_file,
+            "-c", "copy", concat_output, "-y"
+        ], check=True)
+
+        # 3. Ajout musique de fond
+        print("🎵 Mixing background music...")
+        final_output = os.path.join(TEMP_DIR, f"final_{job_id}.mp4")
+        bg_music = os.path.join(ASSETS_DIR, "background_music.mp3")
+
+        subprocess.run([
             "ffmpeg", "-i", concat_output, "-i", bg_music,
-            "-filter_complex", "[1:a]volume=0.15[bg];[0:a][bg]amix=inputs=2:duration=first",
+            "-filter_complex", "[1:a]volume=0.12[bg];[0:a][bg]amix=inputs=2:duration=first",
             "-c:v", "copy", "-c:a", "aac", final_output, "-y"
-        ]
-        subprocess.run(cmd_mix)
-        
-        # 4. Upload to Firebase Storage
-        print(f"📤 Uploading {final_output} to Firebase...")
-        blob = bucket.blob(f"final_videos/{final_output}")
+        ], check=True)
+
+        # 4. Upload dans Firebase Storage
+        print(f"📤 Uploading final video to Firebase Storage...")
+        blob_path = f"final_videos/final_{job_id}.mp4"
+        blob = bucket.blob(blob_path)
         blob.upload_from_filename(final_output)
         blob.make_public()
-        
-        # 5. Update BOTH Firestore collections & Finish
-        print(f"✅ Video ready: {blob.public_url}")
-        
-        # Update Job
+        video_url = blob.public_url
+        print(f"✅ Video ready: {video_url}")
+
+        # 5. Mise à jour Firestore
         db.collection('jobs').document(job_id).update({
             'status': 'completed',
-            'video_url': blob.public_url,
-            'finishedAt': firestore.SERVER_TIMESTAMP
+            'video_url': video_url,
+            'finishedAt': firestore.SERVER_TIMESTAMP,
+            'logs': firestore.ArrayUnion(["✅ Rendu terminé avec succès!"])
         })
-        
-        # Update STORY (Crucial for Dashboard UI)
         db.collection('stories').document(job_id).update({
             'status': 'published',
-            'videoUrl': blob.public_url,
+            'videoUrl': video_url,
             'publishedAt': firestore.SERVER_TIMESTAMP,
             'updatedAt': firestore.SERVER_TIMESTAMP
         })
-        
-        print("🎉 Workflow Complete: User dashboard updated to 'published' status.")
-        
+        print("🎉 Workflow Complete!")
+
     except Exception as e:
-        print(f"❌ Critical Error in Render Engine: {e}")
-        db.collection('jobs').document(job_id).update({'status': 'error', 'error': str(e)})
-        db.collection('stories').document(job_id).update({'status': 'error_production', 'feedback': f"Rendu échoué: {str(e)}"})
-    
+        print(f"❌ Critical Error: {e}")
+        db.collection('jobs').document(job_id).update({
+            'status': 'error',
+            'error': str(e),
+            'logs': firestore.ArrayUnion([f"❌ Erreur critique: {str(e)}"])
+        })
+        db.collection('stories').document(job_id).update({
+            'status': 'error_production',
+            'feedback': f"Rendu échoué: {str(e)}"
+        })
+
     finally:
-        # ABSOLUTE SAFETY: SHUTDOWN NO MATTER WHAT
-        print("💤 Shutting down VM in 10 seconds...")
-        time.sleep(10) # Small grace period for logs
+        print("💤 Shutting down VM in 15 seconds...")
+        time.sleep(15)
         os.system("sudo shutdown -h now")
 
 if __name__ == "__main__":
     import sys
     job_id = None
-    
+
     if len(sys.argv) > 1:
         job_id = sys.argv[1]
     else:
-        # Pull from GCP Metadata
         try:
             print("Checking VM Metadata for job_id...")
             met_url = "http://metadata.google.internal/computeMetadata/v1/instance/attributes/job_id"
@@ -193,11 +278,8 @@ if __name__ == "__main__":
     if job_id:
         doc = db.collection('jobs').document(job_id).get()
         if doc.exists:
-            # Update VM status to running before starting processing
-            db.collection('jobs').document(job_id).update({
-                'vmStatus': 'running',
-                'logs': firestore.ArrayUnion(["VM connectée, début du rendu..."])
-            })
             process_job(job_id, doc.to_dict())
+        else:
+            print(f"Job {job_id} not found in Firestore.")
     else:
-        print("Usage: python render_engine.py <job_id> OR set 'job_id' metadata.")
+        print("Usage: python render_engine.py <job_id> OR set 'job_id' VM metadata.")
