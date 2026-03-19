@@ -16,7 +16,7 @@ const INSTANCE_NAME = "prod-vm-dolu";
  * Triggered when an Admin validates a story.
  * Starts the GPU VM and triggers the render engine.
  */
-exports.triggerRenderPipeline = functions.region("us-central1").firestore
+exports.triggerRenderPipeline = functions.region("us-central1").runWith({ memory: '512MB' }).firestore
     .document("stories/{storyId}")
     .onUpdate(async (change, context) => {
         // LAZY LOAD heavy compute library to avoid load timeout
@@ -141,7 +141,7 @@ echo "$(date): render_engine.py finished." >> $LOG`;
  * Watcher for Job completion.
  * When the VM completes a job, we update the main story record.
  */
-exports.onJobCompleted = functions.region("us-central1").firestore
+exports.onJobCompleted = functions.region("us-central1").runWith({ memory: '512MB' }).firestore
     .document("jobs/{jobId}")
     .onUpdate(async (change, context) => {
         const newValue = change.after.data();
