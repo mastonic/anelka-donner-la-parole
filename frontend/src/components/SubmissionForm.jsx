@@ -2,10 +2,22 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Send, ChevronLeft, CreditCard, Sparkles, Wand2, CheckSquare } from 'lucide-react';
 
+const CATEGORIES = [
+  { id: 'trahison', label: 'Trahison', emoji: '🔪', desc: 'Infidélité, mensonge, coup de poignard dans le dos' },
+  { id: 'famille', label: 'Famille', emoji: '🏚️', desc: 'Relations toxiques, secrets, conflits familiaux' },
+  { id: 'amour', label: 'Amour', emoji: '💔', desc: 'Rupture, manipulation sentimentale, obsession' },
+  { id: 'argent', label: 'Argent', emoji: '💸', desc: 'Arnaque, dette, jalousie financière' },
+  { id: 'revenge', label: 'Revenge', emoji: '⚡', desc: 'Vengeance, justice personnelle, retournement de situation' },
+  { id: 'immigration', label: 'Exil & Identité', emoji: '✈️', desc: 'Immigration, racisme, reconstruction de soi' },
+  { id: 'travail', label: 'Travail', emoji: '🏢', desc: 'Injustice au boulot, licenciement, harcèlement' },
+  { id: 'paranormal', label: 'Paranormal', emoji: '👁️', desc: 'Spiritualité, expériences inexpliquées, présages' },
+];
+
 const SubmissionForm = ({ onBack, initialPseudo = 'Dolu' }) => {
   const [formData, setFormData] = useState({
     pseudo: initialPseudo,
     title: '',
+    category: '',
     story: '',
     signature: '',
     agreed: false
@@ -40,6 +52,7 @@ const SubmissionForm = ({ onBack, initialPseudo = 'Dolu' }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.category) return alert("Choisis une catégorie pour ton histoire.");
     if (!formData.agreed) return alert("Veuillez accepter les conditions.");
     if (!formData.signature) return alert("Veuillez signer électroniquement.");
     
@@ -50,6 +63,7 @@ const SubmissionForm = ({ onBack, initialPseudo = 'Dolu' }) => {
         body: JSON.stringify({
           pseudo: formData.pseudo,
           title: formData.title,
+          category: formData.category,
           content: formData.story,
           signature: formData.signature
         })
@@ -114,6 +128,31 @@ const SubmissionForm = ({ onBack, initialPseudo = 'Dolu' }) => {
               placeholder="Ex: Le jour où tout a basculé..."
               className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 focus:ring-2 focus:ring-emerald-500 outline-none transition font-bold text-lg"
             />
+          </div>
+
+          {/* Category */}
+          <div className="space-y-4">
+            <label className="text-xs font-bold text-white/30 uppercase tracking-[0.2em]">
+              Catégorie <span className="text-red-400">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {CATEGORIES.map(cat => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setFormData({...formData, category: cat.id})}
+                  className={`text-left p-4 rounded-2xl border transition-all ${
+                    formData.category === cat.id
+                      ? 'bg-emerald-500/15 border-emerald-500 text-white'
+                      : 'bg-white/5 border-white/10 text-white/50 hover:border-white/30 hover:text-white/80'
+                  }`}
+                >
+                  <span className="text-2xl">{cat.emoji}</span>
+                  <p className="font-black text-sm mt-2 leading-tight">{cat.label}</p>
+                  <p className="text-[10px] mt-1 leading-tight opacity-60">{cat.desc}</p>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Story Body */}
