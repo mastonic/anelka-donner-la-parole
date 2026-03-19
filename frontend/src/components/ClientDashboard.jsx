@@ -224,7 +224,12 @@ const ClientDashboard = ({ onBack }) => {
                            <FileText size={24} />}
                         </div>
                         <div>
-                          <h3 className="font-bold text-lg">{story.title}</h3>
+                            <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-lg">{story.title}</h3>
+                            {story.category === 'coquin' && (
+                              <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none flex-shrink-0">🔞</span>
+                            )}
+                          </div>
                           <p className="text-sm text-white/40">{story.createdAt ? new Date(story.createdAt._seconds * 1000).toLocaleDateString('fr-FR') : 'Date inconnue'}</p>
                         </div>
                       </div>

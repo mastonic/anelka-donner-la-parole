@@ -11,6 +11,7 @@ const CATEGORIES = [
   { id: 'immigration', label: 'Exil & Identité', emoji: '✈️', desc: 'Immigration, racisme, reconstruction de soi' },
   { id: 'travail', label: 'Travail', emoji: '🏢', desc: 'Injustice au boulot, licenciement, harcèlement' },
   { id: 'paranormal', label: 'Paranormal', emoji: '👁️', desc: 'Spiritualité, expériences inexpliquées, présages' },
+  { id: 'coquin', label: 'Chaud & Coquin', emoji: '🌶️', desc: 'Histoires suggestives, rencontres inattendues, révélations intimes', adult: true },
 ];
 
 const SubmissionForm = ({ onBack, initialPseudo = 'Dolu' }) => {
@@ -141,18 +142,26 @@ const SubmissionForm = ({ onBack, initialPseudo = 'Dolu' }) => {
                   key={cat.id}
                   type="button"
                   onClick={() => setFormData({...formData, category: cat.id})}
-                  className={`text-left p-4 rounded-2xl border transition-all ${
+                  className={`relative text-left p-4 rounded-2xl border transition-all ${
                     formData.category === cat.id
-                      ? 'bg-emerald-500/15 border-emerald-500 text-white'
+                      ? cat.adult ? 'bg-red-500/15 border-red-500 text-white' : 'bg-emerald-500/15 border-emerald-500 text-white'
                       : 'bg-white/5 border-white/10 text-white/50 hover:border-white/30 hover:text-white/80'
                   }`}
                 >
+                  {cat.adult && (
+                    <span className="absolute top-2 right-2 text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">🔞</span>
+                  )}
                   <span className="text-2xl">{cat.emoji}</span>
                   <p className="font-black text-sm mt-2 leading-tight">{cat.label}</p>
                   <p className="text-[10px] mt-1 leading-tight opacity-60">{cat.desc}</p>
                 </button>
               ))}
             </div>
+            {formData.category === 'coquin' && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 text-xs text-red-300 font-medium">
+                🔞 <span className="font-black">Contenu adulte</span> — Ton histoire sera marquée "18+" et soumise à une modération renforcée avant publication. Aucun contenu explicitement pornographique ne sera accepté.
+              </div>
+            )}
           </div>
 
           {/* Story Body */}
