@@ -71,14 +71,9 @@ const LandingPage = ({ onStartClient, onStartAdmin, user, isAdmin, onLogout }) =
                 </button>
               </>
             ) : (
-              <>
-                <button onClick={onStartClient} className="text-sm font-bold text-white border border-white/20 hover:border-white/60 hover:text-white transition px-4 py-2.5 rounded-xl">
-                  Connexion
-                </button>
-                <button onClick={onStartClient} className="bg-emerald-500 text-black px-5 py-2.5 rounded-xl text-sm font-black shadow-xl shadow-emerald-500/20 transition hover:scale-105 active:scale-95">
-                  ESPACE CLIENT
-                </button>
-              </>
+              <button onClick={onStartClient} className="bg-emerald-500 text-black px-5 py-2.5 rounded-xl text-sm font-black shadow-xl shadow-emerald-500/20 transition hover:scale-105 active:scale-95">
+                ESPACE CLIENT
+              </button>
             )}
           </div>
 
@@ -123,11 +118,7 @@ const LandingPage = ({ onStartClient, onStartAdmin, user, isAdmin, onLogout }) =
                       Déconnexion
                     </button>
                   </>
-                ) : (
-                  <button onClick={() => { onStartClient(); setMobileMenuOpen(false); }} className="text-left text-sm font-bold text-white/50 hover:text-white py-3 transition">
-                    Connexion
-                  </button>
-                )}
+                ) : null}
               </div>
             </motion.div>
           )}

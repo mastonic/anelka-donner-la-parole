@@ -26,20 +26,13 @@ const ClientDashboard = ({ onBack }) => {
     if (!user) return;
     setIsLoading(true);
     try {
-      // Fetch by UID first (accurate), fallback to pseudo
+      // Fetch by UID — only stories belonging to this exact account
       const res = await fetch(`/api/user/profile-by-uid/${user.uid}`);
       const data = await res.json();
-      // If UID returns stories, use them; otherwise try pseudo
-      if (data.storiesCount > 0) {
-        setProfile(data);
-        if (data.pseudo) {
-          setUserPseudo(data.pseudo);
-          localStorage.setItem(pseudoKey, data.pseudo);
-        }
-      } else {
-        const res2 = await fetch(`/api/user/profile/${userPseudo}`);
-        const data2 = await res2.json();
-        setProfile(data2);
+      setProfile(data);
+      if (data.pseudo) {
+        setUserPseudo(data.pseudo);
+        localStorage.setItem(pseudoKey, data.pseudo);
       }
     } catch (err) {
       console.error('Fetch profile failed:', err);

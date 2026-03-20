@@ -66,6 +66,16 @@ const Dashboard = ({ onBack, onViewClient }) => {
     activeAgents: 0
   });
 
+  const [hiddenStoryIds, setHiddenStoryIds] = useState(new Set());
+
+  const hideStory = (id) => setHiddenStoryIds(prev => new Set([...prev, id]));
+  const clearFinished = () => {
+    const finishedIds = (stats.recentStories || [])
+      .filter(s => s.status === 'published' || s.status?.startsWith('error'))
+      .map(s => s.id);
+    setHiddenStoryIds(prev => new Set([...prev, ...finishedIds]));
+  };
+
   const [config, setConfig] = useState({
     openai: '',
     google: '',
@@ -348,23 +358,52 @@ const Dashboard = ({ onBack, onViewClient }) => {
         {activeTab === 'studio' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
              <div className="lg:col-span-3 space-y-4">
-                <h3 className="text-xs font-black uppercase tracking-widest text-white/40 mb-2">Historique Prods</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-white/40">Historique Prods</h3>
+                  <button
+                    onClick={clearFinished}
+                    className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-red-400 transition px-2 py-1 rounded-lg hover:bg-red-500/5 border border-transparent hover:border-red-500/20"
+                    title="Masquer les publiées et erreurs"
+                  >
+                    Vider terminés
+                  </button>
+                </div>
                 <div className="space-y-2 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar">
-                   {stats.recentStories?.map((s) => (
-                      <button 
+                   {stats.recentStories?.filter(s => !hiddenStoryIds.has(s.id)).map((s) => (
+                      <div
                         key={s.id}
-                        onClick={() => setSelectedStory(s.id)}
-                        className={`w-full p-4 rounded-2xl border text-left transition ${selectedStory === s.id ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-500/10' : 'bg-white/5 border-white/5 hover:bg-white/[0.08]'}`}
+                        className={`relative group w-full p-4 rounded-2xl border text-left transition ${selectedStory === s.id ? 'bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-500/10' : 'bg-white/5 border-white/5 hover:bg-white/[0.08]'}`}
                       >
-                         <p className="font-bold text-sm truncate">{s.title || s.content?.substring(0, 20)}</p>
-                         <div className="flex justify-between items-center mt-2">
+                        <button
+                          onClick={() => setSelectedStory(s.id)}
+                          className="w-full text-left"
+                        >
+                          <p className="font-bold text-sm truncate pr-5">{s.title || s.content?.substring(0, 20)}</p>
+                          <div className="flex justify-between items-center mt-2">
                             <span className={`text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded ${s.status === 'published' ? 'bg-emerald-500/10 text-emerald-400' : s.status === 'error_production' ? 'bg-red-500/10 text-red-400' : 'bg-white/10 text-white/40'}`}>
-                               {s.status === 'validée' ? 'En attente VM' : s.status.replace('_', ' ')}
+                              {s.status === 'validée' ? 'En attente VM' : s.status.replace('_', ' ')}
                             </span>
                             <span className="text-[10px] text-white/20 font-bold">{new Date(s.createdAt?._seconds * 1000).toLocaleDateString('fr-FR')}</span>
-                         </div>
-                      </button>
+                          </div>
+                        </button>
+                        {/* Delete/hide button */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); hideStory(s.id); }}
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 transition p-1 rounded-lg hover:bg-red-500/10"
+                          title="Masquer cette entrée"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
                    ))}
+                   {(stats.recentStories?.filter(s => !hiddenStoryIds.has(s.id)).length === 0) && (
+                     <div className="text-center py-8 text-white/20">
+                       <p className="text-xs font-bold uppercase tracking-widest">Liste vide</p>
+                       <button onClick={() => setHiddenStoryIds(new Set())} className="mt-2 text-[10px] text-white/30 hover:text-white/60 transition underline">
+                         Tout afficher
+                       </button>
+                     </div>
+                   )}
                 </div>
              </div>
 

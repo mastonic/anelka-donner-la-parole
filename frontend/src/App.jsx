@@ -55,9 +55,10 @@ function AppContent() {
     )
   }
 
-  // After login: admins → admin dashboard, everyone else → client dashboard
-  function handleLoginSuccess({ isAdmin: userIsAdmin }) {
-    setView(userIsAdmin ? 'admin_dashboard' : 'client_dashboard')
+  // After login: always land on client dashboard.
+  // Admins can navigate to admin panel via the 🛡️ button on landing page.
+  function handleLoginSuccess() {
+    setView('client_dashboard')
     setLoginTarget(null)
   }
 
