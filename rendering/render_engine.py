@@ -238,7 +238,11 @@ def process_job(job_id, data):
 
             audio = generate_voiceover(seg['text'], i, keys, job_id)
             clip = create_segment_video(seg['img_url'], audio, i, seg['text'])
-            video_clips.append(clip)
+            # Vérifier que le clip existe et n'est pas vide avant de l'ajouter
+            if os.path.exists(clip) and os.path.getsize(clip) > 0:
+                video_clips.append(clip)
+            else:
+                print(f"⚠️ Clip {i} invalide ou vide, ignoré.")
 
         if not video_clips:
             raise Exception("Aucun clip vidéo généré.")
