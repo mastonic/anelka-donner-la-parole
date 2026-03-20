@@ -29,7 +29,7 @@ const FAQItem = ({ question, answer }) => {
   );
 };
 
-const LandingPage = ({ onStartClient, onStartAdmin }) => {
+const LandingPage = ({ onStartClient, onStartAdmin, user, isAdmin, onLogout }) => {
   return (
     <div className="min-h-screen bg-[#0c0c0c] text-white selection:bg-emerald-500/30 font-sans">
       {/* Navigation */}
@@ -47,18 +47,45 @@ const LandingPage = ({ onStartClient, onStartAdmin }) => {
             <a href="#faq" className="text-sm font-bold text-white/40 hover:text-white transition">FAQ</a>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={onStartAdmin}
-              className="text-sm font-bold text-white border border-white/20 hover:border-white/60 hover:text-white transition px-4 py-3 rounded-[1rem]"
-            >
-              Connexion
-            </button>
-            <button
-              onClick={onStartClient}
-              className="bg-emerald-500 text-black px-6 py-3 rounded-[1rem] text-sm font-black shadow-xl shadow-emerald-500/20 transition hover:scale-105 active:scale-95"
-            >
-              ESPACE CLIENT
-            </button>
+            {user ? (
+              <>
+                {isAdmin && (
+                  <button
+                    onClick={onStartAdmin}
+                    className="text-sm font-bold text-white border border-white/20 hover:border-white/60 transition px-4 py-3 rounded-[1rem]"
+                  >
+                    🛡️ Admin
+                  </button>
+                )}
+                <button
+                  onClick={onStartClient}
+                  className="bg-emerald-500 text-black px-6 py-3 rounded-[1rem] text-sm font-black shadow-xl shadow-emerald-500/20 transition hover:scale-105 active:scale-95"
+                >
+                  MON ESPACE
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="text-xs font-bold text-white/30 hover:text-white/70 transition px-3 py-3"
+                >
+                  Déconnexion
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={onStartAdmin}
+                  className="text-sm font-bold text-white border border-white/20 hover:border-white/60 hover:text-white transition px-4 py-3 rounded-[1rem]"
+                >
+                  Connexion
+                </button>
+                <button
+                  onClick={onStartClient}
+                  className="bg-emerald-500 text-black px-6 py-3 rounded-[1rem] text-sm font-black shadow-xl shadow-emerald-500/20 transition hover:scale-105 active:scale-95"
+                >
+                  ESPACE CLIENT
+                </button>
+              </>
+            )}
           </div>
         </div>
       </nav>

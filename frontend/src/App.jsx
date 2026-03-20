@@ -1,7 +1,10 @@
 import React, { useState } from 'react'
+import { AuthProvider, useAuth } from './AuthContext'
 import LandingPage from './components/LandingPage'
-import Dashboard from './components/Dashboard' // Admin Dashboard
+import Dashboard from './components/Dashboard'
 import ClientDashboard from './components/ClientDashboard'
+import LoginPage from './components/LoginPage'
+import { Loader2 } from 'lucide-react'
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -39,29 +42,97 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function App() {
-  const [view, setView] = useState('landing')
+function AppContent() {
+  const { user, isAdmin, loading, logout } = useAuth()
+  const [view, setView] = useState('landing') // 'landing' | 'login' | 'client_dashboard' | 'admin_dashboard'
+  const [loginTarget, setLoginTarget] = useState(null) // 'client' | 'admin'
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center">
+        <Loader2 className="animate-spin text-white/30" size={40} />
+      </div>
+    )
+  }
+
+  // After login success, redirect to the intended destination
+  function handleLoginSuccess({ isAdmin: userIsAdmin }) {
+    if (loginTarget === 'admin' && userIsAdmin) {
+      setView('admin_dashboard')
+    } else {
+      setView('client_dashboard')
+    }
+    setLoginTarget(null)
+  }
+
+  function handleStartClient() {
+    if (user) {
+      setView('client_dashboard')
+    } else {
+      setLoginTarget('client')
+      setView('login')
+    }
+  }
+
+  function handleStartAdmin() {
+    if (user && isAdmin) {
+      setView('admin_dashboard')
+    } else {
+      setLoginTarget('admin')
+      setView('login')
+    }
+  }
+
+  function handleBack() {
+    setView('landing')
+  }
 
   return (
     <div className="w-full">
       {view === 'landing' && (
         <LandingPage
-          onStartClient={() => setView('client_dashboard')}
-          onStartAdmin={() => setView('admin_dashboard')}
+          onStartClient={handleStartClient}
+          onStartAdmin={handleStartAdmin}
+          user={user}
+          isAdmin={isAdmin}
+          onLogout={logout}
         />
       )}
-      {view === 'client_dashboard' && (
+
+      {view === 'login' && (
+        <LoginPage
+          onBack={() => setView('landing')}
+          onSuccess={handleLoginSuccess}
+        />
+      )}
+
+      {view === 'client_dashboard' && user && (
         <ErrorBoundary key="client">
-          <ClientDashboard onBack={() => setView('landing')} />
+          <ClientDashboard onBack={handleBack} />
         </ErrorBoundary>
       )}
-      {view === 'admin_dashboard' && (
+
+      {view === 'admin_dashboard' && user && isAdmin && (
         <ErrorBoundary key="admin">
-          <Dashboard onBack={() => setView('landing')} />
+          <Dashboard onBack={handleBack} />
         </ErrorBoundary>
+      )}
+
+      {/* Fallback: user tries to access protected view without auth */}
+      {(view === 'client_dashboard' && !user) && (
+        <LoginPage onBack={handleBack} onSuccess={handleLoginSuccess} />
+      )}
+      {(view === 'admin_dashboard' && (!user || !isAdmin)) && (
+        <LoginPage onBack={handleBack} onSuccess={handleLoginSuccess} />
       )}
     </div>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  )
+}
