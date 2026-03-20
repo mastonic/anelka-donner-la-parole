@@ -4,6 +4,7 @@ import base64
 import requests
 import subprocess
 import firebase_admin
+import msgpack
 from firebase_admin import credentials, storage, firestore
 
 # --- Configuration ---
@@ -17,9 +18,9 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 _sa_path = os.path.join(SCRIPT_DIR, "..", "serviceAccountKey.json")
 if os.path.exists(_sa_path):
     cred = credentials.Certificate(_sa_path)
-    firebase_admin.initialize_app(cred, {'storageBucket': 'dolunaleka.appspot.com'})
+    firebase_admin.initialize_app(cred, {'storageBucket': 'dolunaleka.firebasestorage.app'})
 else:
-    firebase_admin.initialize_app(options={'storageBucket': 'dolunaleka.appspot.com'})
+    firebase_admin.initialize_app(options={'storageBucket': 'dolunaleka.firebasestorage.app'})
 
 db = firestore.client()
 bucket = storage.bucket()
@@ -44,17 +45,22 @@ def sync_voice_ref():
         print(f"⚠️ Could not sync voice ref: {e}. Using existing local file.")
 
 
+DOLU_FISH_MODEL_ID = "593d29aa2f4f43ad8a8dcd3476d4d019"  # Voix Dolunaelka sur fish.audio
+
 def get_api_keys():
     """Récupère toutes les clés API depuis Firestore."""
     try:
         doc = db.collection('config').document('api_keys').get()
         if doc.exists:
-            return doc.to_dict()
+            keys = doc.to_dict()
+            keys.setdefault('fish_model_id', DOLU_FISH_MODEL_ID)
+            return keys
     except Exception as e:
         print(f"⚠️ Could not fetch API keys from Firestore: {e}")
     return {
         'google': os.environ.get('GEMINI_API_KEY'),
-        'fish': os.environ.get('FISH_SPEECH_KEY')
+        'fish': os.environ.get('FISH_SPEECH_KEY'),
+        'fish_model_id': DOLU_FISH_MODEL_ID
     }
 
 def clean_text(text):
@@ -64,46 +70,68 @@ def clean_text(text):
         text = text.replace(char, "")
     return text.strip()
 
-def generate_voiceover_fish_speech(text, segment_id, fish_key):
+def generate_voiceover_fish_speech(text, segment_id, fish_key, model_id=None):
     """
-    Génère la voix clonée via Fish Speech API.
-    Utilise dolu_ref_short.mp3 comme référence audio pour le clonage.
+    Génère la voix clonée via Fish Speech API (msgpack, qualité maximale).
+    - Si model_id disponible : utilise le modèle persistant (meilleure qualité).
+    - Sinon : utilise la référence audio inline (fallback).
     """
     print(f"🎙️ Fish Speech: Generating cloned voice for segment {segment_id}...")
-    ref_audio_path = os.path.join(ASSETS_DIR, "dolu_ref_short.mp3")
     output_path = os.path.join(TEMP_DIR, f"audio_{segment_id}.mp3")
 
-    # Encode reference audio in base64
-    with open(ref_audio_path, "rb") as f:
-        ref_audio_b64 = base64.b64encode(f.read()).decode("utf-8")
+    if model_id:
+        # Meilleure qualité : modèle persistant pré-entraîné
+        print(f"   → Using persistent model: {model_id}")
+        payload = {
+            "text": text,
+            "reference_id": model_id,
+            "format": "mp3",
+            "mp3_bitrate": 192,
+            "normalize": True,
+            "latency": "normal"
+        }
+    else:
+        # Fallback : référence audio inline (base64)
+        print(f"   → No model_id, using inline audio reference.")
+        ref_audio_path = os.path.join(ASSETS_DIR, "dolu_ref_short.mp3")
+        with open(ref_audio_path, "rb") as f:
+            ref_audio_bytes = f.read()
+        payload = {
+            "text": text,
+            "references": [
+                {
+                    "audio": ref_audio_bytes,
+                    "text": "C'est Dolunaelka, je raconte mon histoire depuis les Antilles."
+                }
+            ],
+            "format": "mp3",
+            "mp3_bitrate": 192,
+            "normalize": True,
+            "latency": "normal"
+        }
 
-    payload = {
-        "text": text,
-        "references": [
-            {
-                "audio": ref_audio_b64,
-                "text": "C'est Dolunaelka, je raconte mon histoire depuis les Antilles."
-            }
-        ],
-        "format": "mp3",
-        "mp3_bitrate": 128,
-        "normalize": True,
-        "latency": "normal"
-    }
+    # Fish Speech accepte JSON et msgpack. On utilise JSON pour la compatibilité maximale.
+    # Pour le mode inline (references avec bytes audio), encoder en base64 string.
+    if not model_id and "references" in payload:
+        for ref in payload["references"]:
+            if isinstance(ref.get("audio"), bytes):
+                ref["audio"] = base64.b64encode(ref["audio"]).decode("utf-8")
 
     response = requests.post(
         "https://api.fish.audio/v1/tts",
         json=payload,
         headers={
             "Authorization": f"Bearer {fish_key}",
-            "Content-Type": "application/json"
         },
-        timeout=60
+        stream=True,
+        timeout=120
     )
 
     if response.status_code == 200:
         with open(output_path, "wb") as f:
-            f.write(response.content)
+            for chunk in response.iter_content(chunk_size=4096):
+                if chunk:
+                    f.write(chunk)
         print(f"✅ Fish Speech cloned voice OK (segment {segment_id})")
         return output_path
     else:
@@ -116,14 +144,15 @@ def generate_voiceover(text, segment_id, keys, job_id):
     """
     cleaned = clean_text(text)
 
-    # 1. Fish Speech via Fal.ai (voice clone, cloud, aucun GPU requis)
-    if keys.get('fal'):
+    # 1. Fish Speech direct API (voice clone, cloud, aucun GPU requis)
+    if keys.get('fish'):
         try:
-            return generate_voiceover_fish_speech(cleaned, segment_id, keys['fal'])
+            model_id = keys.get('fish_model_id')  # Persistent model for best quality
+            return generate_voiceover_fish_speech(cleaned, segment_id, keys['fish'], model_id=model_id)
         except Exception as e:
-            print(f"⚠️ Fish Speech (Fal.ai) failed: {e}. Trying GPT-SoVITS...")
+            print(f"⚠️ Fish Speech failed: {e}. Trying GPT-SoVITS...")
             db.collection('jobs').document(job_id).update({
-                'logs': firestore.ArrayUnion([f"Segment {segment_id}: Fish Speech Fal.ai échoué ({e}), tentative SoVITS..."])
+                'logs': firestore.ArrayUnion([f"Segment {segment_id}: Fish Speech échoué ({e}), tentative SoVITS..."])
             })
 
     # 2. GPT-SoVITS (local, nécessite GPU)

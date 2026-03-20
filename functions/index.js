@@ -80,8 +80,12 @@ if [ -z "$PROJECT_DIR" ]; then
   exit 1
 fi
 cd "$PROJECT_DIR"
+echo "$(date): Pulling latest code from git..." >> $LOG
+timeout 20 git pull origin main >> $LOG 2>&1 || echo "$(date): git pull skipped (timeout/error)" >> $LOG
 source venv/bin/activate 2>/dev/null || true
-python3 rendering/render_engine.py >> $LOG 2>&1
+pip install msgpack -q >> $LOG 2>&1 || true
+echo "$(date): Starting render_engine.py for job ${storyId}..." >> $LOG
+python3 rendering/render_engine.py ${storyId} >> $LOG 2>&1
 echo "$(date): render_engine.py finished." >> $LOG`;
 
                 const startupIndex = items.findIndex(i => i.key === 'startup-script');
@@ -400,19 +404,75 @@ router.post('/admin/upload-voice-ref', (req, res) => {
         busboy.on('finish', async () => {
             try {
                 if (!fileBuffer) return res.status(400).json({ error: 'No file received' });
-                const bucket = admin.storage().bucket();
+
+                // 1. Save to Firebase Storage
+                const bucket = admin.storage().bucket('dolunaleka.firebasestorage.app');
                 const blob = bucket.file('assets/dolu_ref.mp3');
                 await blob.save(fileBuffer, { contentType: 'audio/mpeg', metadata: { cacheControl: 'no-cache' } });
                 await blob.makePublic();
                 const url = blob.publicUrl();
+
+                // 2. Respond immediately so the upload doesn't time out
                 res.json({ success: true, url, size: fileBuffer.length });
+
+                // 3. Create persistent Fish Speech model in background (fire-and-forget)
+                setImmediate(async () => {
+                    try {
+                        const axios = require('axios');
+                        const keys = await configService.getApiKeys();
+                        const fishKey = keys.fish;
+                        if (!fishKey) return;
+
+                        // Build multipart/form-data manually (no extra dep needed)
+                        const boundary = '----FishBoundary' + Date.now().toString(16);
+                        const CRLF = '\r\n';
+                        const parts = [
+                            Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="title"${CRLF}${CRLF}Dolunaelka Voice Clone${CRLF}`),
+                            Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="type"${CRLF}${CRLF}tts${CRLF}`),
+                            Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="train_mode"${CRLF}${CRLF}fast${CRLF}`),
+                            Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="visibility"${CRLF}${CRLF}private${CRLF}`),
+                            Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="voices"; filename="dolu_ref.mp3"${CRLF}Content-Type: audio/mpeg${CRLF}${CRLF}`),
+                            fileBuffer,
+                            Buffer.from(`${CRLF}--${boundary}--${CRLF}`)
+                        ];
+                        const body = Buffer.concat(parts);
+
+                        const modelRes = await axios.post('https://api.fish.audio/v1/model', body, {
+                            headers: {
+                                'Authorization': `Bearer ${fishKey}`,
+                                'Content-Type': `multipart/form-data; boundary=${boundary}`
+                            },
+                            timeout: 60000
+                        });
+
+                        const modelId = modelRes.data._id || modelRes.data.id;
+                        if (modelId) {
+                            await db.doc('config/api_keys').set({ fish_model_id: modelId }, { merge: true });
+                            console.log(`✅ Fish Speech model created: ${modelId}`);
+                        }
+                    } catch (fishErr) {
+                        const msg = fishErr.response ? `${fishErr.response.status}: ${JSON.stringify(fishErr.response.data).slice(0, 200)}` : fishErr.message;
+                        console.warn(`⚠️ Fish Speech model creation skipped: ${msg}`);
+                    }
+                });
             } catch (err) {
-                console.error('Upload voice ref error:', err);
-                res.status(500).json({ error: err.message });
+                console.error('Upload voice ref error:', err.message, err.stack);
+                if (!res.headersSent) res.status(500).json({ error: err.message });
             }
         });
 
-        req.pipe(busboy);
+        busboy.on('error', (err) => {
+            console.error('Busboy error:', err.message);
+            if (!res.headersSent) res.status(500).json({ error: 'File parsing error: ' + err.message });
+        });
+
+        // Firebase Cloud Functions buffers req.rawBody before Express runs.
+        // Piping req directly to busboy gets an empty stream — use rawBody instead.
+        if (req.rawBody) {
+            busboy.end(req.rawBody);
+        } else {
+            req.pipe(busboy);
+        }
     } catch (err) {
         console.error('Upload voice ref error:', err);
         res.status(500).json({ error: err.message });
