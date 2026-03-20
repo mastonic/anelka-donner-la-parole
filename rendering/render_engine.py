@@ -251,9 +251,12 @@ def process_job(job_id, data):
             for clip in video_clips:
                 f.write(f"file '{clip}'\n")
 
+        # Re-encoder au lieu de stream-copier pour éviter les incompatibilités de timebase entre segments
         subprocess.run([
             "ffmpeg", "-f", "concat", "-safe", "0", "-i", list_file,
-            "-c", "copy", concat_output, "-y"
+            "-c:v", "libx264", "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-ar", "44100",
+            concat_output, "-y"
         ], check=True)
 
         # 3. Ajout musique de fond
