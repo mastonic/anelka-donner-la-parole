@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Download, Loader2, Sparkles, AlertCircle, ChevronLeft, LayoutDashboard, FileEdit, PieChart, ShieldAlert, ScrollText, Image as ImageIcon, Check, X, CheckCircle, Server } from 'lucide-react';
+import { Play, Download, Loader2, Sparkles, AlertCircle, ChevronLeft, LayoutDashboard, FileEdit, PieChart, ShieldAlert, ScrollText, Image as ImageIcon, Check, X, CheckCircle, Server, User, Video } from 'lucide-react';
 import ProgressBar from './ProgressBar';
 import AdminCrible from './AdminCrible';
 import TiktokSheet from './TiktokSheet';
+import TiktokLiveSheet from './TiktokLiveSheet';
 import VideoAnalytics from './VideoAnalytics';
 
 const VoiceRefUploader = () => {
@@ -46,7 +47,7 @@ const VoiceRefUploader = () => {
   );
 };
 
-const Dashboard = ({ onBack }) => {
+const Dashboard = ({ onBack, onViewClient }) => {
   const [activeTab, setActiveTab] = useState('crible');
   const [topic, setTopic] = useState('');
   const [jobId, setJobId] = useState(null);
@@ -56,6 +57,7 @@ const Dashboard = ({ onBack }) => {
   const [storyData, setStoryData] = useState(null);
   const [jobData, setJobData] = useState(null);
   const [showSheet, setShowSheet] = useState(false);
+  const [studioView, setStudioView] = useState('production'); // 'production' | 'tiktok'
   const [logs, setLogs] = useState([]);
   const [stats, setStats] = useState({
     totalStories: 0,
@@ -292,13 +294,24 @@ const Dashboard = ({ onBack }) => {
           ))}
         </nav>
 
-        <button 
-          onClick={onBack}
-          className="mt-auto flex items-center gap-3 px-4 py-3 text-white/40 hover:text-white transition text-sm font-medium"
-        >
-          <ChevronLeft size={18} />
-          Retour Landing
-        </button>
+        <div className="mt-auto flex flex-col gap-1">
+          {onViewClient && (
+            <button
+              onClick={onViewClient}
+              className="flex items-center gap-3 px-4 py-3 text-emerald-400/70 hover:text-emerald-400 hover:bg-emerald-500/5 transition text-sm font-medium rounded-xl"
+            >
+              <User size={18} />
+              Vue Client
+            </button>
+          )}
+          <button
+            onClick={onBack}
+            className="flex items-center gap-3 px-4 py-3 text-white/40 hover:text-white transition text-sm font-medium"
+          >
+            <ChevronLeft size={18} />
+            Retour Landing
+          </button>
+        </div>
       </aside>
 
       {/* Admin Main Content */}
@@ -356,7 +369,62 @@ const Dashboard = ({ onBack }) => {
              </div>
 
              <div className="lg:col-span-6 space-y-6">
+
+                {/* View tabs */}
                 {selectedStory && (
+                  <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/5 w-fit">
+                    <button
+                      onClick={() => setStudioView('production')}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition ${
+                        studioView === 'production' ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/60'
+                      }`}
+                    >
+                      <FileEdit size={14} />
+                      Production
+                    </button>
+                    <button
+                      onClick={() => setStudioView('tiktok')}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition ${
+                        studioView === 'tiktok' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'text-white/30 hover:text-white/60'
+                      }`}
+                    >
+                      <Video size={14} />
+                      Fiche Vidéo
+                    </button>
+                    <button
+                      onClick={() => setStudioView('live')}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition ${
+                        studioView === 'live' ? 'bg-pink-500/10 text-pink-400 border border-pink-500/20' : 'text-white/30 hover:text-white/60'
+                      }`}
+                    >
+                      <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                      Live TikTok
+                    </button>
+                  </div>
+                )}
+
+                {/* Fiche Vidéo tab */}
+                {selectedStory && studioView === 'tiktok' && storyData && (
+                  <div className="bg-white/5 border border-white/10 p-6 rounded-[2.5rem]">
+                    <TiktokSheet story={storyData} inline />
+                  </div>
+                )}
+                {selectedStory && studioView === 'tiktok' && !storyData && (
+                  <div className="flex flex-col items-center justify-center p-16 gap-4 text-white/20">
+                    <Video size={40} className="animate-pulse" />
+                    <p className="text-xs font-bold uppercase tracking-widest">Sélectionne une histoire avec une vidéo publiée</p>
+                  </div>
+                )}
+
+                {/* Live TikTok tab */}
+                {selectedStory && studioView === 'live' && (
+                  <div className="overflow-y-auto max-h-[80vh] pr-1">
+                    <TiktokLiveSheet story={storyData || { title: '', pseudo: '' }} />
+                  </div>
+                )}
+
+                {/* Production tab content */}
+                {(!selectedStory || studioView === 'production') && selectedStory && (
                    <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] flex justify-between items-center overflow-x-auto gap-4 scrollbar-hide">
                       {[
                         { label: 'Script', status: status === 'generating_script' ? 'active' : (status === 'generating_images' || status === 'completed' || status === 'published' ? 'done' : 'idle') },
@@ -382,7 +450,7 @@ const Dashboard = ({ onBack }) => {
                    </div>
                 )}
 
-                <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] relative overflow-hidden group">
+                {studioView === 'production' && <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] relative overflow-hidden group">
                    <div className="flex justify-between items-center mb-6">
                       <h2 className="text-xl font-bold flex items-center gap-2">
                          {status === 'published' ? <Play className="text-emerald-400" size={20} /> : <FileEdit className="text-purple-400" size={20} />}
@@ -447,9 +515,9 @@ const Dashboard = ({ onBack }) => {
                         ></textarea>
                       </div>
                    )}
-                </div>
+                </div>}
 
-                <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem]">
+                {studioView === 'production' && <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem]">
                    <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                       <ImageIcon className="text-purple-400" size={20} />
                       Storyboard Preview
@@ -483,7 +551,7 @@ const Dashboard = ({ onBack }) => {
                          </div>
                       ))}
                    </div>
-                </div>
+                </div>}
              </div>
 
              <aside className="lg:col-span-3 space-y-6">

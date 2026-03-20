@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Send, ChevronLeft, CreditCard, Sparkles, Wand2, CheckSquare } from 'lucide-react';
+import { useAuth } from '../AuthContext';
 
 const CATEGORIES = [
   { id: 'trahison', label: 'Trahison', emoji: '🔪', desc: 'Infidélité, mensonge, coup de poignard dans le dos' },
@@ -14,7 +15,8 @@ const CATEGORIES = [
   { id: 'coquin', label: 'Chaud & Coquin', emoji: '🌶️', desc: 'Histoires suggestives, rencontres inattendues, révélations intimes', adult: true },
 ];
 
-const SubmissionForm = ({ onBack, initialPseudo = 'Dolu' }) => {
+const SubmissionForm = ({ onBack, initialPseudo = '' }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     pseudo: initialPseudo,
     title: '',
@@ -66,7 +68,9 @@ const SubmissionForm = ({ onBack, initialPseudo = 'Dolu' }) => {
           title: formData.title,
           category: formData.category,
           content: formData.story,
-          signature: formData.signature
+          signature: formData.signature,
+          uid: user?.uid || null,
+          userEmail: user?.email || null,
         })
       });
 

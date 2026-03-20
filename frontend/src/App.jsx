@@ -55,13 +55,9 @@ function AppContent() {
     )
   }
 
-  // After login success, redirect to the intended destination
+  // After login: admins → admin dashboard, everyone else → client dashboard
   function handleLoginSuccess({ isAdmin: userIsAdmin }) {
-    if (loginTarget === 'admin' && userIsAdmin) {
-      setView('admin_dashboard')
-    } else {
-      setView('client_dashboard')
-    }
+    setView(userIsAdmin ? 'admin_dashboard' : 'client_dashboard')
     setLoginTarget(null)
   }
 
@@ -74,13 +70,16 @@ function AppContent() {
     }
   }
 
+  // Admin panel access: only reachable if already confirmed admin
   function handleStartAdmin() {
     if (user && isAdmin) {
       setView('admin_dashboard')
-    } else {
-      setLoginTarget('admin')
+    } else if (!user) {
+      // Not logged in: send to client login, admin redirect happens naturally after
+      setLoginTarget('client')
       setView('login')
     }
+    // Non-admin logged-in users: do nothing (no access)
   }
 
   function handleBack() {
@@ -114,7 +113,7 @@ function AppContent() {
 
       {view === 'admin_dashboard' && user && isAdmin && (
         <ErrorBoundary key="admin">
-          <Dashboard onBack={handleBack} />
+          <Dashboard onBack={handleBack} onViewClient={() => setView('client_dashboard')} />
         </ErrorBoundary>
       )}
 

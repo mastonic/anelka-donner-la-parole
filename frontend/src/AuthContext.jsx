@@ -19,10 +19,10 @@ export function AuthProvider({ children }) {
   async function checkAdmin(firebaseUser) {
     if (!firebaseUser) return false;
     try {
-      // Admin emails stored in config/api_keys → admins_emails[]
-      const snap = await getDoc(doc(db, 'config', 'api_keys'));
+      // Admin emails stored in config/admins → emails[]
+      const snap = await getDoc(doc(db, 'config', 'admins'));
       if (snap.exists()) {
-        const emails = snap.data().admins_emails || [];
+        const emails = snap.data().emails || [];
         return emails.includes(firebaseUser.email);
       }
     } catch (e) {

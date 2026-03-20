@@ -189,29 +189,57 @@ def create_segment_video(img_url, audio_path, segment_id, subtitle_text):
         f.write(img_data)
 
     # Escape subtitle text for FFmpeg drawtext
-    raw = subtitle_text.upper().replace("'", "\\'").replace(":", "\\:").replace(",", "\\,").replace("!", "\\!").replace(";", "\\;")
-    # Wrap on 2 lines max (~40 chars each) so nothing gets cut
-    words = raw.split()
-    line1, line2 = [], []
+    def esc(t):
+        return t.upper().replace("\\","\\\\").replace("'","\u2019").replace(":","\\:").replace(",","\\,").replace("!","\\!").replace(";","\\;").replace("%","\\%")
+
+    # Wrap at 22 chars per line max (fontsize 52 bold uppercase ≈ 42px/char → 22*42=924px < 1080px)
+    words = subtitle_text.upper().split()
+    lines, cur = [], []
     for w in words:
-        if len(" ".join(line1 + [w])) <= 40:
-            line1.append(w)
+        test = " ".join(cur + [w])
+        if len(test) <= 22:
+            cur.append(w)
         else:
-            line2.append(w)
-    subtitle_line1 = " ".join(line1)
-    subtitle_line2 = " ".join(line2[:6])  # max 6 mots sur la 2e ligne
+            if cur:
+                lines.append(" ".join(cur))
+            cur = [w]
+    if cur:
+        lines.append(" ".join(cur))
+    # Keep max 3 lines, show first 3 only
+    lines = lines[:3]
+    while len(lines) < 3:
+        lines.append("")
+
+    l1, l2, l3 = esc(lines[0]), esc(lines[1]), esc(lines[2])
+    fs = 52  # fontsize
+    lh = 68  # line height in pixels
+    # Position: bottom area with safe margin from edge
+    y3 = "h-120"
+    y2 = f"h-{120+lh}"
+    y1 = f"h-{120+lh*2}"
+
+    sub_filters = (
+        f"drawtext=text='{l1}':fontcolor=white:fontsize={fs}:fontfile='{font_path}'"
+        f":x=(w-text_w)/2:y={y1}:shadowcolor=black:shadowx=3:shadowy=3:borderw=4:bordercolor=black:fix_bounds=1"
+    )
+    if l2:
+        sub_filters += (
+            f",drawtext=text='{l2}':fontcolor=white:fontsize={fs}:fontfile='{font_path}'"
+            f":x=(w-text_w)/2:y={y2}:shadowcolor=black:shadowx=3:shadowy=3:borderw=4:bordercolor=black:fix_bounds=1"
+        )
+    if l3:
+        sub_filters += (
+            f",drawtext=text='{l3}':fontcolor=white:fontsize={fs}:fontfile='{font_path}'"
+            f":x=(w-text_w)/2:y={y3}:shadowcolor=black:shadowx=3:shadowy=3:borderw=4:bordercolor=black:fix_bounds=1"
+        )
 
     cmd = [
-        "ffmpeg", "-i", img_path, "-i", audio_path,
+        "ffmpeg", "-loop", "1", "-i", img_path, "-i", audio_path,
         "-filter_complex",
-        # d=750 → jusqu'à 30s de zoompan, -shortest coupe à la fin de l'audio
-        f"[0:v]scale=2160:-1,zoompan=z='min(zoom+0.0015,1.5)':d=750:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920[v];"
-        f"[v]drawtext=text='{subtitle_line1}':fontcolor=yellow:fontsize=55:fontfile='{font_path}'"
-        f":x=(w-text_w)/2:y=h-420:shadowcolor=black:shadowx=4:shadowy=4:borderw=3:bordercolor=black,"
-        f"drawtext=text='{subtitle_line2}':fontcolor=yellow:fontsize=55:fontfile='{font_path}'"
-        f":x=(w-text_w)/2:y=h-350:shadowcolor=black:shadowx=4:shadowy=4:borderw=3:bordercolor=black",
-        "-c:v", "libx264", "-tune", "stillimage", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-shortest", output_path, "-y"
+        f"[0:v]scale=2160:-1,zoompan=z='min(zoom+0.0015,1.5)':d=750:fps=25:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920[v];"
+        f"[v]{sub_filters}",
+        "-c:v", "libx264", "-tune", "stillimage", "-pix_fmt", "yuv420p", "-r", "25",
+        "-c:a", "aac", "-ar", "44100", "-shortest", output_path, "-y"
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True)

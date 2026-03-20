@@ -331,19 +331,39 @@ router.get('/user/profile/:pseudo', async (req, res) => {
         const snapshot = await db.collection('stories').where('pseudo', '==', pseudo).get();
         const stories = [];
         snapshot.forEach(doc => stories.push({ id: doc.id, ...doc.data() }));
-        
-        // Dynamic balance calculation based on real data
         const publishedStories = stories.filter(s => s.status === 'published');
-        const balance = publishedStories.length * 42.10; // 40% of hypothetical revenue
-        
+        const balance = publishedStories.length * 42.10;
         res.json({
             pseudo,
             storiesCount: stories.length,
             balance: balance.toFixed(2),
-            stories: stories // Return full stories for simple frontend integration
+            stories
         });
     } catch (err) {
         console.error("API Error (profile):", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Fetch profile by Firebase UID — primary identifier for authenticated users
+router.get('/user/profile-by-uid/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params;
+        const snapshot = await db.collection('stories').where('uid', '==', uid).get();
+        const stories = [];
+        snapshot.forEach(doc => stories.push({ id: doc.id, ...doc.data() }));
+        stories.sort((a, b) => (b.createdAt?._seconds || 0) - (a.createdAt?._seconds || 0));
+        const publishedStories = stories.filter(s => s.status === 'published');
+        const balance = publishedStories.length * 42.10;
+        const pseudo = stories.length > 0 ? stories[0].pseudo : null;
+        res.json({
+            pseudo,
+            storiesCount: stories.length,
+            balance: balance.toFixed(2),
+            stories
+        });
+    } catch (err) {
+        console.error("API Error (profile-by-uid):", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -520,6 +540,28 @@ router.post('/config', async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         console.error("API Error (config):", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Admin emails management — writes to config/admins (separate from api_keys)
+router.get('/admin/emails', async (req, res) => {
+    try {
+        const snap = await db.doc('config/admins').get();
+        res.json(snap.exists ? snap.data() : { emails: [] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/admin/emails', async (req, res) => {
+    try {
+        const { emails } = req.body;
+        if (!Array.isArray(emails)) return res.status(400).json({ error: 'emails must be an array' });
+        await db.doc('config/admins').set({ emails }, { merge: false });
+        res.json({ success: true, emails });
+    } catch (err) {
+        console.error("API Error (admin/emails):", err);
         res.status(500).json({ error: err.message });
     }
 });
