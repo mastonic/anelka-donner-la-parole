@@ -189,14 +189,26 @@ def create_segment_video(img_url, audio_path, segment_id, subtitle_text):
         f.write(img_data)
 
     # Escape subtitle text for FFmpeg drawtext
-    safe_text = subtitle_text.upper().replace("'", "\\'").replace(":", "\\:").replace(",", "\\,")
-    safe_text = safe_text[:80]
+    raw = subtitle_text.upper().replace("'", "\\'").replace(":", "\\:").replace(",", "\\,").replace("!", "\\!").replace(";", "\\;")
+    # Wrap on 2 lines max (~40 chars each) so nothing gets cut
+    words = raw.split()
+    line1, line2 = [], []
+    for w in words:
+        if len(" ".join(line1 + [w])) <= 40:
+            line1.append(w)
+        else:
+            line2.append(w)
+    subtitle_line1 = " ".join(line1)
+    subtitle_line2 = " ".join(line2[:6])  # max 6 mots sur la 2e ligne
 
     cmd = [
         "ffmpeg", "-i", img_path, "-i", audio_path,
         "-filter_complex",
-        f"[0:v]scale=2160:-1,zoompan=z='min(zoom+0.0015,1.5)':d=125:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920[v];"
-        f"[v]drawtext=text='{safe_text}':fontcolor=yellow:fontsize=60:fontfile='{font_path}'"
+        # d=750 → jusqu'à 30s de zoompan, -shortest coupe à la fin de l'audio
+        f"[0:v]scale=2160:-1,zoompan=z='min(zoom+0.0015,1.5)':d=750:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920[v];"
+        f"[v]drawtext=text='{subtitle_line1}':fontcolor=yellow:fontsize=55:fontfile='{font_path}'"
+        f":x=(w-text_w)/2:y=h-420:shadowcolor=black:shadowx=4:shadowy=4:borderw=3:bordercolor=black,"
+        f"drawtext=text='{subtitle_line2}':fontcolor=yellow:fontsize=55:fontfile='{font_path}'"
         f":x=(w-text_w)/2:y=h-350:shadowcolor=black:shadowx=4:shadowy=4:borderw=3:bordercolor=black",
         "-c:v", "libx264", "-tune", "stillimage", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-shortest", output_path, "-y"
