@@ -45,7 +45,7 @@ def sync_voice_ref():
         print(f"⚠️ Could not sync voice ref: {e}. Using existing local file.")
 
 
-DOLU_FISH_MODEL_ID = "593d29aa2f4f43ad8a8dcd3476d4d019"  # Voix Dolunaelka sur fish.audio
+DOLU_FISH_MODEL_ID = None  # reference_id API non supporté sur ce modèle, on utilise l'audio inline
 
 def get_api_keys():
     """Récupère toutes les clés API depuis Firestore."""
