@@ -26,22 +26,25 @@ class CuratorAgent {
       - Ces expressions créoles doivent s'insérer naturellement au milieu d'une phrase en français (ex: "J'étais là, bouche bée... bagay-la, c'était trop fort."). JAMAIS une phrase entière en créole.
       - NE PAS utiliser le créole pour la narration normale, les transitions, les introductions ou les explications.
       - Le ton doit être immersif, avec du rythme (pauses marquées par ...).
-      - Divise le script en 10 à 12 segments courts.
+      - Divise le script en 15 à 18 segments.
+      - Chaque segment doit contenir entre 30 et 50 mots de narration (environ 8 à 12 secondes de parole).
+      - Développe bien chaque moment : les émotions, les détails, les réactions. N'abrège pas.
+      - La durée totale visée est de 1 minute 30 secondes (90 secondes).
       - Chaque segment doit avoir :
-        1. Le texte à dire (Narration).
+        1. Le texte à dire (Narration) — minimum 30 mots, maximum 50 mots.
         2. Une description visuelle DÉTAILLÉE pour un générateur d'images (Prompts en anglais pour FLUX).
-      
+
       HISTOIRE ORIGINALE :
       Titre: ${storyData.title}
       Récit: ${storyData.content}
-      
+
       RÉPONDRE UNIQUEMENT EN JSON :
       {
         "segments": [
           { "text": "...", "visual_prompt": "..." },
           ...
         ],
-        "total_estimated_duration": 60
+        "total_estimated_duration": 90
       }
     `;
 
