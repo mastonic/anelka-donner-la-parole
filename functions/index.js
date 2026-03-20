@@ -80,8 +80,8 @@ if [ -z "$PROJECT_DIR" ]; then
   exit 1
 fi
 cd "$PROJECT_DIR"
-echo "$(date): Pulling latest code from git..." >> $LOG
-timeout 20 git pull origin main >> $LOG 2>&1 || echo "$(date): git pull skipped (timeout/error)" >> $LOG
+echo "$(date): Downloading latest render_engine.py from GitHub..." >> $LOG
+curl -sL "https://raw.githubusercontent.com/mastonic/anelka-donner-la-parole/main/rendering/render_engine.py" -o rendering/render_engine.py && echo "$(date): render_engine.py updated." >> $LOG || echo "$(date): curl failed, using existing file." >> $LOG
 source venv/bin/activate 2>/dev/null || true
 pip install msgpack -q >> $LOG 2>&1 || true
 echo "$(date): Starting render_engine.py for job ${storyId}..." >> $LOG
