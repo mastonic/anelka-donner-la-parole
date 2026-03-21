@@ -135,7 +135,11 @@ const Dashboard = ({ onBack, onViewClient }) => {
           const story = Array.isArray(data) ? data.find(s => s.id === selectedStory) : data;
           if (story) {
             setStoryData(story);
-            setScript(story.script || story.content || "");
+            if (story.script && Array.isArray(story.script)) {
+              setScript(story.script.map(s => s.text).join('\n\n'));
+            } else {
+              setScript(story.script || story.content || "");
+            }
           }
         } catch (err) {
           console.error("Failed to fetch story details:", err);
