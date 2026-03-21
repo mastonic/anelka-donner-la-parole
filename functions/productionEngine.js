@@ -1,4 +1,5 @@
 const curatorAgent = require('./agents/curator');
+const artDirectorAgent = require('./agents/art_director');
 const configService = require('./configService');
 const axios = require('axios');
 const admin = require('firebase-admin');
@@ -48,23 +49,38 @@ class ProductionEngine {
       });
 
       const productionData = await curatorAgent.generateScript(storyData);
-      
+
       if (!productionData || !Array.isArray(productionData.segments)) {
         throw new Error("L'IA n'a pas généré de segments valides. Réessaye avec un autre sujet.");
       }
 
-      await storyRef.update({ 
+      // 1.5. Visual Prompt Generation
+      console.log('--- Step 1.5: Generating Visual Prompts (Art Director) ---');
+      await storyRef.update({
+        status: 'generating_visual_prompts',
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      const visualPrompts = await artDirectorAgent.generateVisualPrompts(productionData.segments);
+
+      // Merge text segments with their visual prompts
+      const enrichedSegments = productionData.segments.map((seg, i) => ({
+        ...seg,
+        visual_prompt: visualPrompts[i]?.visual_prompt || '',
+      }));
+
+      await storyRef.update({
         status: 'generating_images',
-        script: productionData.segments,
-        productionData: productionData
+        script: enrichedSegments,
+        productionData: { ...productionData, segments: enrichedSegments }
       });
 
       // 2. Media Generation (Images with Fixed Seed)
       console.log('--- Step 2: Generating Media Assets (FLUX) ---');
       const seed = Math.floor(Math.random() * 1000000);
-      
-      const segmentsWithImages = await Promise.all(productionData.segments.map(async (seg, index) => {
-        console.log(`Generating image for segment ${index + 1}/${productionData.segments.length}...`);
+
+      const segmentsWithImages = await Promise.all(enrichedSegments.map(async (seg, index) => {
+        console.log(`Generating image for segment ${index + 1}/${enrichedSegments.length}...`);
         try {
           const response = await axios.post('https://fal.run/fal-ai/flux/schnell', {
             prompt: `(Dolu Character: A handsome young Metis man from the Antilles, medium-toned tan skin, short stylish hair, athletic build) ${seg.visual_prompt}, cinematic 8k, highly detailed textures, vibrant colors, 9:16 portrait orientation`,

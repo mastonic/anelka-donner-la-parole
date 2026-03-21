@@ -16,15 +16,6 @@ Cette plateforme valorise les récits antillais authentiques. Le créole martini
 Des mots comme "koké" (polliniser, butiner — action des oiseaux et insectes sur les fleurs), "koko" (noix de coco), "bonda" (derrière, terme familier),
 "chabin/chabine" (personne métissée à peau claire) sont des termes culturels légitimes à traiter avec respect et sans censure.
 
-CONTRAINTES VISUELLES — TRÈS IMPORTANT :
-Chaque visual_prompt doit décrire précisément la SCÈNE de ce segment spécifique :
-- QUI : personnage(s) de la scène avec âge estimé, émotion visible sur le visage, tenue vestimentaire adaptée au contexte caribéen/antillais
-- OÙ : lieu exact de la scène (cuisine créole, marché de Fort-de-France, bord de mer tropical, chambre, bureau, rue, etc.)
-- QUOI : l'action ou le moment précis illustré par ce segment (argument, révélation, moment de tristesse, fête, confrontation, etc.)
-- FORMAT : toujours 9:16 portrait, 'cinematic realism', 'golden hour or dramatic lighting', 'highly detailed'
-- STYLE : 'Caribbean Martinique/Antilles setting', 'mixed-race/Metis Caribbean people'
-Chaque prompt doit être en anglais, unique et directement lié au texte du segment. Ne jamais utiliser le même prompt générique pour plusieurs segments.
-
 CONTRAINTES SCRIPT :
 - Rédigé EN FRANÇAIS standard, fluide et naturel.
 - Le créole uniquement aux moments d'émotion forte (max 2-3 expressions sur tout le script, insérées au milieu d'une phrase française).
@@ -36,7 +27,7 @@ CONTRAINTES SCRIPT :
 FORMAT DE RÉPONSE — JSON UNIQUEMENT :
 {
   "segments": [
-    { "text": "...", "visual_prompt": "..." }
+    { "text": "..." }
   ],
   "total_estimated_duration": 90
 }`;
