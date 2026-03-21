@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Download, Loader2, Sparkles, AlertCircle, ChevronLeft, LayoutDashboard, FileEdit, PieChart, ShieldAlert, ScrollText, Image as ImageIcon, Check, X, CheckCircle, Server, User, Video } from 'lucide-react';
+import { Play, Download, Loader2, Sparkles, AlertCircle, ChevronLeft, LayoutDashboard, FileEdit, PieChart, ShieldAlert, ScrollText, Image as ImageIcon, Check, X, CheckCircle, Server, User, Video, Film, Eye, ChevronRight } from 'lucide-react';
 import ProgressBar from './ProgressBar';
 import AdminCrible from './AdminCrible';
 import TiktokSheet from './TiktokSheet';
@@ -67,6 +67,9 @@ const Dashboard = ({ onBack, onViewClient }) => {
   });
 
   const [hiddenStoryIds, setHiddenStoryIds] = useState(new Set());
+  const [segmentModal, setSegmentModal] = useState(null); // { seg, i }
+  const [publishedStories, setPublishedStories] = useState([]);
+  const [prodModal, setProdModal] = useState(null); // full story object
 
   const hideStory = (id) => setHiddenStoryIds(prev => new Set([...prev, id]));
   const clearFinished = () => {
@@ -257,6 +260,14 @@ const Dashboard = ({ onBack, onViewClient }) => {
     return () => clearInterval(interval);
   }, [selectedStory, status]);
 
+  useEffect(() => {
+    if (activeTab !== 'bibliotheque') return;
+    fetch('/api/stories?status=published')
+      .then(r => r.json())
+      .then(data => setPublishedStories(Array.isArray(data) ? data : []))
+      .catch(err => console.error('Failed to fetch published stories:', err));
+  }, [activeTab]);
+
   const saveConfig = async (newKeys) => {
     try {
       await fetch('/api/config', {
@@ -292,6 +303,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
             { id: 'studio', label: 'Studio Validation', icon: FileEdit },
             { id: 'analytics', label: 'Analytiques Vidéos', icon: PieChart },
             { id: 'splitter', label: 'Splitter Financier', icon: PieChart },
+            { id: 'bibliotheque', label: 'Vidéothèque', icon: Film },
             { id: 'logs', label: 'Journal des Logs', icon: ScrollText },
             { id: 'settings', label: 'Paramètres API', icon: ShieldAlert },
           ].map((item) => (
@@ -337,6 +349,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
                {activeTab === 'studio' && 'Studio Dolu'}
                {activeTab === 'analytics' && 'Performances Antillaises'}
                {activeTab === 'splitter' && 'Splitter Financier'}
+               { activeTab === 'bibliotheque' && 'Vidéothèque' }
                { activeTab === 'logs' && 'Logs Agents' }
                { activeTab === 'settings' && 'Paramètres Système' }
             </h1>
@@ -567,7 +580,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
                    </h2>
                    <div className="grid grid-cols-4 gap-4">
                       {storyData?.segments?.length > 0 ? storyData.segments.map((seg, i) => (
-                        <div key={i} className="aspect-square bg-black/40 rounded-xl border border-white/5 flex items-center justify-center group relative overflow-hidden">
+                        <div key={i} onClick={() => setSegmentModal({ seg, i })} className="aspect-square bg-black/40 rounded-xl border border-white/5 flex items-center justify-center group relative overflow-hidden cursor-pointer hover:border-purple-500/40 transition">
                           {seg.img_url ? (
                             <>
                               <img
@@ -580,6 +593,10 @@ const Dashboard = ({ onBack, onViewClient }) => {
                                 <Loader2 className="animate-spin text-white/10" size={16} />
                                 <span className="text-[10px] text-white/20 select-none">Asset {i+1}...</span>
                               </div>
+                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                <Eye size={20} className="text-white" />
+                              </div>
+                              <div className="absolute bottom-1 left-1 bg-black/60 text-[9px] font-bold px-1.5 py-0.5 rounded text-white/60">{i+1}</div>
                             </>
                           ) : (
                             <div className="flex flex-col items-center gap-2">
@@ -695,6 +712,55 @@ const Dashboard = ({ onBack, onViewClient }) => {
                    </div>
                 </div>
              </aside>
+          </div>
+        )}
+
+        {activeTab === 'bibliotheque' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-white/30 font-bold uppercase tracking-widest">{publishedStories.length} production{publishedStories.length !== 1 ? 's' : ''} finalisée{publishedStories.length !== 1 ? 's' : ''}</p>
+            </div>
+            {publishedStories.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-32 gap-4 text-white/10">
+                <Film size={48} />
+                <p className="text-xs font-bold uppercase tracking-widest">Aucune production publiée</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                {publishedStories.map(story => (
+                  <button
+                    key={story.id}
+                    onClick={() => setProdModal(story)}
+                    className="group bg-white/5 border border-white/5 hover:border-purple-500/30 rounded-[1.5rem] overflow-hidden text-left transition hover:bg-white/[0.08]"
+                  >
+                    <div className="aspect-[9/16] bg-black relative overflow-hidden">
+                      {story.segments?.[0]?.img_url ? (
+                        <img src={story.segments[0].img_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/10"><Film size={28} /></div>
+                      )}
+                      {story.videoUrl && (
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-xl">
+                            <Play size={20} className="text-black ml-1" fill="black" />
+                          </div>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-white/40">@{story.pseudo}</p>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <p className="text-sm font-bold leading-tight line-clamp-2">{story.title}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-[9px] text-white/30">{story.publishedAt?._seconds ? new Date(story.publishedAt._seconds * 1000).toLocaleDateString('fr-FR') : '—'}</span>
+                        <span className="text-[9px] text-white/20">{story.segments?.length || 0} seg.</span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -822,11 +888,139 @@ const Dashboard = ({ onBack, onViewClient }) => {
         )}
       </main>
 
+      {/* Segment Modal */}
+      {segmentModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSegmentModal(null)}>
+          <div className="bg-[#111] border border-white/10 rounded-[2rem] max-w-2xl w-full overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-8 py-5 border-b border-white/5">
+              <span className="text-xs font-black uppercase tracking-widest text-purple-400">Segment {segmentModal.i + 1}</span>
+              <button onClick={() => setSegmentModal(null)} className="text-white/30 hover:text-white transition"><X size={18} /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-0">
+              <div className="aspect-[9/16] max-h-[420px] bg-black overflow-hidden">
+                {segmentModal.seg.img_url ? (
+                  <img src={segmentModal.seg.img_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/10"><ImageIcon size={32} /></div>
+                )}
+              </div>
+              <div className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[420px]">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2">Texte narré</p>
+                  <p className="text-sm leading-relaxed text-white/90 font-medium">{segmentModal.seg.text}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-purple-400 mb-2">Visual Prompt (Flux)</p>
+                  <p className="text-[11px] leading-relaxed text-white/50 font-mono bg-black/40 p-3 rounded-xl border border-white/5">{segmentModal.seg.visual_prompt || '—'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Production Detail Modal */}
+      {prodModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setProdModal(null)}>
+          <div className="bg-[#111] border border-white/10 rounded-[2rem] w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-8 py-5 border-b border-white/5 flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-black tracking-tight">{prodModal.title}</h2>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-[10px] text-white/30 font-bold">@{prodModal.pseudo}</span>
+                  <span className="text-white/10">·</span>
+                  <span className="text-[10px] text-white/30">{prodModal.publishedAt?._seconds ? new Date(prodModal.publishedAt._seconds * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</span>
+                  <span className="text-[9px] font-black px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full uppercase tracking-wider">Publié</span>
+                </div>
+              </div>
+              <button onClick={() => setProdModal(null)} className="text-white/30 hover:text-white transition p-2"><X size={20} /></button>
+            </div>
+
+            <div className="overflow-y-auto flex-1">
+              {/* Video + Meta */}
+              <div className="grid grid-cols-3 gap-6 p-8 border-b border-white/5">
+                <div className="col-span-1">
+                  {prodModal.videoUrl ? (
+                    <div className="aspect-[9/16] bg-black rounded-2xl overflow-hidden border border-white/10">
+                      <video src={prodModal.videoUrl} controls className="w-full h-full object-cover" poster={prodModal.segments?.[0]?.img_url} />
+                    </div>
+                  ) : (
+                    <div className="aspect-[9/16] bg-black/40 rounded-2xl border border-white/5 border-dashed flex items-center justify-center text-white/10"><Film size={32} /></div>
+                  )}
+                </div>
+                <div className="col-span-2 space-y-5">
+                  <div className="bg-black/40 rounded-2xl border border-white/5 p-5 space-y-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-purple-400">Pipeline IA utilisé</p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-white/40">Script agent</span>
+                        <span className="font-bold text-white/70">GPT-4o → Gemini 2.5 Flash</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-white/40">Images</span>
+                        <span className="font-bold text-white/70">Flux (Fal.ai)</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-white/40">Voix</span>
+                        <span className="font-bold text-white/70">Fish Speech — Dolu V1</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-white/40">Rendu</span>
+                        <span className="font-bold text-white/70">FFmpeg · GCP GPU</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-white/40">Segments</span>
+                        <span className="font-bold text-white/70">{prodModal.segments?.length || 0} segments</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-white/40">Seed visuel</span>
+                        <span className="font-bold text-white/70 font-mono">{prodModal.visualSeed ?? '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-black/40 rounded-2xl border border-white/5 p-5">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-3">Histoire originale</p>
+                    <p className="text-xs leading-relaxed text-white/50 line-clamp-6">{prodModal.content}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Segments */}
+              <div className="p-8">
+                <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-5">Script & Storyboard complet</p>
+                <div className="space-y-3">
+                  {(prodModal.segments || []).map((seg, i) => (
+                    <div key={i} className="grid grid-cols-[80px_1fr_1fr] gap-4 bg-black/30 border border-white/5 rounded-2xl overflow-hidden">
+                      <div className="aspect-square bg-black">
+                        {seg.img_url ? (
+                          <img src={seg.img_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/10 text-[10px] font-bold">{i+1}</div>
+                        )}
+                      </div>
+                      <div className="py-4 pr-2 flex flex-col justify-center">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1">Segment {i+1} — Texte</p>
+                        <p className="text-xs leading-relaxed text-white/80">{seg.text}</p>
+                      </div>
+                      <div className="py-4 pr-4 flex flex-col justify-center border-l border-white/5">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-purple-400/60 mb-1">Visual Prompt</p>
+                        <p className="text-[10px] leading-relaxed text-white/30 font-mono">{seg.visual_prompt || '—'}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sheet Modal */}
       {showSheet && storyData && (
-        <TiktokSheet 
-          story={storyData} 
-          onBack={() => setShowSheet(false)} 
+        <TiktokSheet
+          story={storyData}
+          onBack={() => setShowSheet(false)}
         />
       )}
     </div>
