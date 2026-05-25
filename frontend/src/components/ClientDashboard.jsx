@@ -310,11 +310,11 @@ const ClientDashboard = ({ onBack }) => {
             {/* Wallet */}
             {activeTab === 'wallet' && (
               <div className="space-y-6">
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-700 p-8 md:p-10 rounded-[2.5rem] text-black shadow-2xl shadow-emerald-500/20">
-                  <div className="flex justify-between items-start mb-10">
+                <div className="bg-gradient-to-br from-emerald-500 to-teal-700 p-5 md:p-10 rounded-[2rem] md:rounded-[2.5rem] text-black shadow-2xl shadow-emerald-500/20">
+                  <div className="flex justify-between items-start mb-6 md:mb-10">
                     <div>
                       <p className="text-sm font-bold uppercase tracking-widest opacity-60">Solde Disponible</p>
-                      <p className="text-5xl font-black mt-1 tracking-tighter">{profile.balance} €</p>
+                      <p className="text-4xl md:text-5xl font-black mt-1 tracking-tighter">{profile.balance} €</p>
                     </div>
                     <Wallet size={44} className="opacity-40" />
                   </div>
@@ -370,7 +370,7 @@ const ClientDashboard = ({ onBack }) => {
                   </div>
                 </div>
 
-                <div className="bg-white/5 border border-white/10 p-8 rounded-[2rem] space-y-6">
+                <div className="bg-white/5 border border-white/10 p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] space-y-6">
                   <div>
                     <h2 className="text-lg font-black uppercase tracking-tight mb-0.5">Paramètres Profil</h2>
                     <p className="text-xs text-white/30">Ton pseudo apparaît sur tes histoires publiées.</p>

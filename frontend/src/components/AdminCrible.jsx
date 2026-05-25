@@ -66,7 +66,7 @@ const AdminCrible = ({ onLaunchProd }) => {
             <motion.div 
               key={story.id}
               whileHover={{ y: -5 }}
-              className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 flex flex-col gap-6 group relative overflow-hidden"
+              className="bg-white/5 border border-white/10 rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-8 flex flex-col gap-4 md:gap-6 group relative overflow-hidden"
             >
               {/* Virality Score Badge */}
               <div className="absolute top-6 right-6 flex flex-col items-end">
@@ -109,7 +109,7 @@ const AdminCrible = ({ onLaunchProd }) => {
 
             {/* Editing Modal (Simulated) */}
             {editingId === story.id && (
-              <div className="absolute inset-0 bg-[#0a0a0a] p-8 z-10 flex flex-col gap-4">
+              <div className="absolute inset-0 bg-[#0a0a0a] p-4 md:p-8 z-10 flex flex-col gap-4">
                 <h4 className="font-bold text-sm uppercase tracking-widest text-white/40">Édition du Script</h4>
                 <textarea 
                   defaultValue={story.content}

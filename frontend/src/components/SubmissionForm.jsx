@@ -85,7 +85,7 @@ const SubmissionForm = ({ onBack, initialPseudo = '' }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c0c0c] text-white p-6 md:p-12 animate-in fade-in duration-500 overflow-y-auto">
+    <div className="min-h-screen bg-[#0c0c0c] text-white p-4 md:p-8 lg:p-12 animate-in fade-in duration-500 overflow-y-auto">
       <button 
         onClick={onBack}
         className="flex items-center gap-2 text-white/40 hover:text-white mb-8 transition font-bold uppercase tracking-widest text-xs"
@@ -95,7 +95,7 @@ const SubmissionForm = ({ onBack, initialPseudo = '' }) => {
       </button>
 
       <header className="max-w-2xl mx-auto mb-16">
-        <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 leading-none">
+        <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tighter mb-4 leading-none">
           Ta vie mérite <br /> d'être racontée.
         </h1>
         <p className="text-emerald-400 text-lg md:text-xl font-bold italic">
@@ -192,14 +192,14 @@ const SubmissionForm = ({ onBack, initialPseudo = '' }) => {
           </div>
 
           {/* Optional Upload */}
-          <div className="bg-white/5 border border-white/10 border-dashed rounded-[2rem] p-10 text-center cursor-pointer hover:bg-white/10 transition group">
+          <div className="bg-white/5 border border-white/10 border-dashed rounded-[2rem] p-6 md:p-10 text-center cursor-pointer hover:bg-white/10 transition group">
             <Camera className="mx-auto mb-4 text-white/10 group-hover:text-emerald-400 transition group-hover:scale-110" size={40} />
             <p className="text-sm font-bold">Ajoute des preuves ou photos (optionnel)</p>
             <p className="text-xs text-white/20 mt-2 italic font-medium">Pour nourrir l'IA en détails réels et visuels</p>
           </div>
 
           {/* Reward Banner */}
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-8 flex items-center gap-6 relative overflow-hidden">
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-4 md:p-8 flex items-center gap-3 md:gap-6 relative overflow-hidden">
             <div className="absolute -right-4 -bottom-4 opacity-5 rotate-12">
                <CreditCard size={120} />
             </div>
