@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Download, Loader2, Sparkles, AlertCircle, ChevronLeft, LayoutDashboard, FileEdit, PieChart, ShieldAlert, ScrollText, Image as ImageIcon, Check, X, CheckCircle, Server, User, Video, Film, Eye, ChevronRight } from 'lucide-react';
+import { Play, Download, Loader2, Sparkles, AlertCircle, ChevronLeft, LayoutDashboard, FileEdit, PieChart, ShieldAlert, ScrollText, Image as ImageIcon, Check, X, CheckCircle, Server, User, Video, Film, Eye, ChevronRight, Menu } from 'lucide-react';
 import ProgressBar from './ProgressBar';
 import AdminCrible from './AdminCrible';
 import TiktokSheet from './TiktokSheet';
@@ -70,6 +70,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
   const [segmentModal, setSegmentModal] = useState(null); // { seg, i }
   const [publishedStories, setPublishedStories] = useState([]);
   const [prodModal, setProdModal] = useState(null); // full story object
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const hideStory = (id) => setHiddenStoryIds(prev => new Set([...prev, id]));
   const clearFinished = () => {
@@ -284,17 +285,29 @@ const Dashboard = ({ onBack, onViewClient }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c0c0c] text-white flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#0c0c0c] text-white flex md:flex-row">
+      {/* Mobile overlay backdrop */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
       {/* Admin Sidebar */}
-      <aside className="w-full md:w-64 border-r border-white/5 p-6 flex flex-col gap-8 bg-[#0a0a0a]">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/20">
-            <LayoutDashboard size={24} className="text-white" />
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[280px] flex flex-col gap-6 bg-[#0a0a0a] border-r border-white/5 p-4 overflow-y-auto transition-transform duration-300 ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 md:w-64 md:z-auto md:flex md:gap-8 md:p-6 md:min-h-screen`}>
+        <div className="flex items-center justify-between mb-2 md:mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/20">
+              <LayoutDashboard size={24} className="text-white" />
+            </div>
+            <div>
+              <span className="font-bold block">Command Center</span>
+              <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase">Admin Mode</span>
+            </div>
           </div>
-          <div>
-            <span className="font-bold block">Command Center</span>
-            <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase">Admin Mode</span>
-          </div>
+          <button onClick={() => setMobileSidebarOpen(false)} className="md:hidden text-white/40 hover:text-white p-1">
+            <X size={18} />
+          </button>
         </div>
 
         <nav className="flex flex-col gap-2">
@@ -341,25 +354,34 @@ const Dashboard = ({ onBack, onViewClient }) => {
       </aside>
 
       {/* Admin Main Content */}
-      <main className="flex-1 p-8 md:p-12 overflow-y-auto">
-        <header className="flex justify-between items-center mb-8">
-          <div className="flex flex-col">
-            <h1 className="text-4xl font-black tracking-tighter uppercase">
-               {activeTab === 'crible' && 'Le Crible AI'}
-               {activeTab === 'studio' && 'Studio Dolu'}
-               {activeTab === 'analytics' && 'Performances Antillaises'}
-               {activeTab === 'splitter' && 'Splitter Financier'}
-               { activeTab === 'bibliotheque' && 'Vidéothèque' }
-               { activeTab === 'logs' && 'Logs Agents' }
-               { activeTab === 'settings' && 'Paramètres Système' }
-            </h1>
-            {activeTab === 'studio' && selectedStory && (
-               <p className="text-xs text-purple-400 font-bold uppercase tracking-widest mt-1">Édition & Production en cours</p>
-            )}
+      <main className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto min-w-0">
+        <header className="flex justify-between items-center mb-6 md:mb-8">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="md:hidden text-white/40 hover:text-white p-1 flex-shrink-0"
+            >
+              <Menu size={22} />
+            </button>
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-2xl md:text-4xl font-black tracking-tighter uppercase truncate">
+                 {activeTab === 'crible' && 'Le Crible AI'}
+                 {activeTab === 'studio' && 'Studio Dolu'}
+                 {activeTab === 'analytics' && 'Performances Antillaises'}
+                 {activeTab === 'splitter' && 'Splitter Financier'}
+                 { activeTab === 'bibliotheque' && 'Vidéothèque' }
+                 { activeTab === 'logs' && 'Logs Agents' }
+                 { activeTab === 'settings' && 'Paramètres Système' }
+              </h1>
+              {activeTab === 'studio' && selectedStory && (
+                 <p className="text-xs text-purple-400 font-bold uppercase tracking-widest mt-1">Édition & Production en cours</p>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-4 bg-white/5 px-4 py-2 rounded-xl border border-white/10">
+          <div className="flex items-center gap-2 md:gap-4 bg-white/5 px-3 md:px-4 py-2 rounded-xl border border-white/10 flex-shrink-0">
              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-             <span className="text-xs font-bold text-white/40 uppercase tracking-widest">{stats.activeAgents} Agents Online</span>
+             <span className="text-xs font-bold text-white/40 uppercase tracking-widest hidden sm:inline">{stats.activeAgents} Agents Online</span>
+             <span className="text-xs font-bold text-emerald-400 sm:hidden">{stats.activeAgents}</span>
           </div>
         </header>
 
@@ -428,7 +450,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
 
                 {/* View tabs */}
                 {selectedStory && (
-                  <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/5 w-fit">
+                  <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-2xl border border-white/5">
                     <button
                       onClick={() => setStudioView('production')}
                       className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition ${
@@ -481,7 +503,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
 
                 {/* Production tab content */}
                 {(!selectedStory || studioView === 'production') && selectedStory && (
-                   <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] flex justify-between items-center overflow-x-auto gap-4 scrollbar-hide">
+                   <div className="bg-white/5 border border-white/10 p-3 md:p-6 rounded-[2rem] flex justify-between items-center overflow-x-auto gap-2 md:gap-4 scrollbar-hide">
                       {[
                         { label: 'Script', status: status === 'generating_script' ? 'active' : (status === 'generating_images' || status === 'completed' || status === 'published' ? 'done' : 'idle') },
                         { label: 'Assets', status: status === 'generating_images' ? 'active' : (status === 'completed' || status === 'published' ? 'done' : 'idle') },
@@ -506,7 +528,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
                    </div>
                 )}
 
-                {studioView === 'production' && <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] relative overflow-hidden group">
+                {studioView === 'production' && <div className="bg-white/5 border border-white/10 p-4 md:p-8 rounded-[2.5rem] relative overflow-hidden group">
                    <div className="flex justify-between items-center mb-6">
                       <h2 className="text-xl font-bold flex items-center gap-2">
                          {status === 'published' ? <Play className="text-emerald-400" size={20} /> : <FileEdit className="text-purple-400" size={20} />}
@@ -518,7 +540,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
                    </div>
 
                    {status === 'published' && storyData?.videoUrl ? (
-                      <div className="aspect-[9/16] max-w-[300px] mx-auto bg-black rounded-3xl overflow-hidden shadow-2xl relative border border-white/10 mt-4">
+                      <div className="aspect-[9/16] max-w-full sm:max-w-[300px] mx-auto bg-black rounded-3xl overflow-hidden shadow-2xl relative border border-white/10 mt-4">
                          <video 
                             src={storyData.videoUrl} 
                             controls 
@@ -567,18 +589,18 @@ const Dashboard = ({ onBack, onViewClient }) => {
                            value={script}
                            onChange={(e) => setScript(e.target.value)}
                            placeholder="Sélectionne une histoire pour commencer..."
-                           className="w-full h-[400px] bg-black/40 border border-white/5 border-dashed rounded-3xl p-8 text-sm leading-relaxed outline-none focus:ring-1 focus:ring-purple-500 font-mono resize-none transition"
+                           className="w-full h-[300px] md:h-[400px] bg-black/40 border border-white/5 border-dashed rounded-3xl p-4 md:p-8 text-sm leading-relaxed outline-none focus:ring-1 focus:ring-purple-500 font-mono resize-none transition"
                         ></textarea>
                       </div>
                    )}
                 </div>}
 
-                {studioView === 'production' && <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem]">
-                   <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                {studioView === 'production' && <div className="bg-white/5 border border-white/10 p-4 md:p-8 rounded-[2.5rem]">
+                   <h2 className="text-xl font-bold mb-4 md:mb-6 flex items-center gap-2">
                       <ImageIcon className="text-purple-400" size={20} />
                       Storyboard Preview
                    </h2>
-                   <div className="grid grid-cols-4 gap-4">
+                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
                       {storyData?.segments?.length > 0 ? storyData.segments.map((seg, i) => (
                         <div key={i} onClick={() => setSegmentModal({ seg, i })} className="aspect-square bg-black/40 rounded-xl border border-white/5 flex items-center justify-center group relative overflow-hidden cursor-pointer hover:border-purple-500/40 transition">
                           {seg.img_url ? (
@@ -615,7 +637,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
              </div>
 
              <aside className="lg:col-span-3 space-y-6">
-                <div className="bg-purple-600 p-8 rounded-[2.5rem] text-white shadow-2xl shadow-purple-500/20">
+                <div className="bg-purple-600 p-4 md:p-8 rounded-[2.5rem] text-white shadow-2xl shadow-purple-500/20">
                     <p className="text-sm opacity-60 mb-8 font-medium">Configure et valide la production pour lancer les agents de rendu.</p>
                     
                     <div className="mb-6 space-y-3">
@@ -699,7 +721,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
                     </div>
                 </div>
 
-                <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] space-y-4">
+                <div className="bg-white/5 border border-white/10 p-4 md:p-8 rounded-[2.5rem] space-y-4">
                    <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Paramètres Audio</h3>
                    <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
                       <div className="w-10 h-10 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center">
@@ -770,10 +792,10 @@ const Dashboard = ({ onBack, onViewClient }) => {
 
         {activeTab === 'splitter' && (
           <div className="space-y-8">
-             <div className="bg-white/5 border border-white/10 p-10 rounded-[3rem]">
-                <h2 className="text-2xl font-black mb-8">Répartition des Revenus</h2>
-                <div className="flex items-center gap-12 mb-12">
-                   <div className="w-48 h-48 relative">
+             <div className="bg-white/5 border border-white/10 p-5 md:p-10 rounded-[2rem] md:rounded-[3rem]">
+                <h2 className="text-xl md:text-2xl font-black mb-5 md:mb-8">Répartition des Revenus</h2>
+                <div className="flex flex-col md:flex-row items-center gap-6 md:gap-12 mb-6 md:mb-12">
+                   <div className="w-36 h-36 md:w-48 md:h-48 relative flex-shrink-0">
                       <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
                          <circle cx="18" cy="18" r="16" fill="none" className="stroke-white/5" strokeWidth="4"></circle>
                          <circle cx="18" cy="18" r="16" fill="none" className="stroke-emerald-500" strokeWidth="4" strokeDasharray={`${stats.followerRevenuePercentage} 100`}></circle>
@@ -810,7 +832,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
         )}
 
         {activeTab === 'logs' && (
-          <div className="bg-black/40 border border-white/5 rounded-3xl p-8 h-[500px] overflow-y-auto font-mono text-xs">
+          <div className="bg-black/40 border border-white/5 rounded-3xl p-4 md:p-8 h-[400px] md:h-[500px] overflow-y-auto font-mono text-xs">
              <div className="space-y-2">
                 {logs.map((log, i) => (
                   <p key={i} className={`${log.type === 'scout' ? 'text-emerald-400' : log.type === 'curator' ? 'text-purple-400' : 'text-blue-400'}`}>
@@ -822,7 +844,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
           </div>
         )}
         {activeTab === 'settings' && (
-          <div className="max-w-2xl bg-white/5 border border-white/10 p-10 rounded-[3rem] space-y-8">
+          <div className="max-w-2xl bg-white/5 border border-white/10 p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] space-y-6 md:space-y-8">
              <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 bg-purple-600/20 text-purple-400 rounded-2xl flex items-center justify-center">
                    <ShieldAlert size={28} />
@@ -892,19 +914,19 @@ const Dashboard = ({ onBack, onViewClient }) => {
       {segmentModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSegmentModal(null)}>
           <div className="bg-[#111] border border-white/10 rounded-[2rem] max-w-2xl w-full overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-8 py-5 border-b border-white/5">
+            <div className="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-white/5">
               <span className="text-xs font-black uppercase tracking-widest text-purple-400">Segment {segmentModal.i + 1}</span>
               <button onClick={() => setSegmentModal(null)} className="text-white/30 hover:text-white transition"><X size={18} /></button>
             </div>
-            <div className="grid grid-cols-2 gap-0">
-              <div className="aspect-[9/16] max-h-[420px] bg-black overflow-hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-0">
+              <div className="aspect-[9/16] max-h-[280px] sm:max-h-[420px] bg-black overflow-hidden">
                 {segmentModal.seg.img_url ? (
                   <img src={segmentModal.seg.img_url} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white/10"><ImageIcon size={32} /></div>
                 )}
               </div>
-              <div className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[420px]">
+              <div className="p-4 md:p-6 flex flex-col gap-4 md:gap-5 overflow-y-auto max-h-[280px] sm:max-h-[420px]">
                 <div>
                   <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2">Texte narré</p>
                   <p className="text-sm leading-relaxed text-white/90 font-medium">{segmentModal.seg.text}</p>
@@ -924,7 +946,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setProdModal(null)}>
           <div className="bg-[#111] border border-white/10 rounded-[2rem] w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="flex items-center justify-between px-8 py-5 border-b border-white/5 flex-shrink-0">
+            <div className="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-white/5 flex-shrink-0">
               <div>
                 <h2 className="text-lg font-black tracking-tight">{prodModal.title}</h2>
                 <div className="flex items-center gap-3 mt-1">
@@ -939,7 +961,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
 
             <div className="overflow-y-auto flex-1">
               {/* Video + Meta */}
-              <div className="grid grid-cols-3 gap-6 p-8 border-b border-white/5">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 p-4 md:p-8 border-b border-white/5">
                 <div className="col-span-1">
                   {prodModal.videoUrl ? (
                     <div className="aspect-[9/16] bg-black rounded-2xl overflow-hidden border border-white/10">
@@ -987,11 +1009,11 @@ const Dashboard = ({ onBack, onViewClient }) => {
               </div>
 
               {/* Segments */}
-              <div className="p-8">
-                <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-5">Script & Storyboard complet</p>
+              <div className="p-4 md:p-8">
+                <p className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-4 md:mb-5">Script & Storyboard complet</p>
                 <div className="space-y-3">
                   {(prodModal.segments || []).map((seg, i) => (
-                    <div key={i} className="grid grid-cols-[80px_1fr_1fr] gap-4 bg-black/30 border border-white/5 rounded-2xl overflow-hidden">
+                    <div key={i} className="grid grid-cols-[64px_1fr] md:grid-cols-[80px_1fr_1fr] gap-3 md:gap-4 bg-black/30 border border-white/5 rounded-2xl overflow-hidden">
                       <div className="aspect-square bg-black">
                         {seg.img_url ? (
                           <img src={seg.img_url} alt="" className="w-full h-full object-cover" />
@@ -1003,7 +1025,7 @@ const Dashboard = ({ onBack, onViewClient }) => {
                         <p className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1">Segment {i+1} — Texte</p>
                         <p className="text-xs leading-relaxed text-white/80">{seg.text}</p>
                       </div>
-                      <div className="py-4 pr-4 flex flex-col justify-center border-l border-white/5">
+                      <div className="hidden md:flex py-4 pr-4 flex-col justify-center border-l border-white/5">
                         <p className="text-[9px] font-black uppercase tracking-widest text-purple-400/60 mb-1">Visual Prompt</p>
                         <p className="text-[10px] leading-relaxed text-white/30 font-mono">{seg.visual_prompt || '—'}</p>
                       </div>

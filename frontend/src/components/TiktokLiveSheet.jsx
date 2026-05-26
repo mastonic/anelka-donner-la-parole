@@ -89,13 +89,13 @@ const TiktokLiveSheet = ({ story }) => {
 
       {/* Timing optimal */}
       <Section icon={Clock} title="Timing & Durée Optimaux" color="blue" defaultOpen>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { label: 'Heure idéale', value: '19h – 21h30', sub: 'Antilles + Métropole actives' },
             { label: 'Durée cible', value: '45 – 90 min', sub: 'Pic à 40 min, couper sur le haut' },
             { label: 'Fréquence', value: '2× / semaine', sub: 'Régularité = algo favorisé' },
           ].map(s => (
-            <div key={s.label} className="bg-blue-500/5 border border-blue-500/15 rounded-2xl p-4 text-center">
+            <div key={s.label} className="bg-blue-500/5 border border-blue-500/15 rounded-2xl p-4 text-center sm:text-left md:text-center">
               <p className="text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">{s.label}</p>
               <p className="text-xl font-black text-blue-400">{s.value}</p>
               <p className="text-[10px] text-white/30 mt-1 italic">{s.sub}</p>
